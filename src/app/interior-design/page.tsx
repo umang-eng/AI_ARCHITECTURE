@@ -20,6 +20,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getHealth } from "@/lib/api";
 
 const categories = [
   { id: "living", name: "Living Room", icon: Sofa },
@@ -88,12 +89,22 @@ export default function InteriorDesign() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
-  const handleGenerate = () => {
+  const [backendMessage, setBackendMessage] = useState<string | null>(null);
+
+  const handleGenerate = async () => {
     setIsGenerating(true);
-    setTimeout(() => {
+    setBackendMessage(null);
+
+    const result = await getHealth();
+    if (result.success) {
       setIsGenerating(false);
       setShowResults(true);
-    }, 3000);
+      setBackendMessage(`Backend connected: ${result.data.version}`);
+    } else {
+      setIsGenerating(false);
+      setBackendMessage(`Backend unavailable: ${result.error}`);
+      setShowResults(false);
+    }
   };
 
   return (
@@ -173,6 +184,9 @@ export default function InteriorDesign() {
                 )}
                 {isGenerating ? "Synthesizing..." : "Generate Concepts"}
               </PrimaryButton>
+              {backendMessage && (
+                <p className="mt-3 text-sm text-muted-foreground">{backendMessage}</p>
+              )}
             </div>
           </Card>
         </motion.div>

@@ -21,16 +21,28 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getHealth } from "@/lib/api";
 
 export default function ThreeDDesign() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasModel, setHasModel] = useState(false);
+  const [backendMessage, setBackendMessage] = useState<string | null>(null);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
+    setBackendMessage(null);
+
+    const result = await getHealth();
+    if (result.success) {
+      setHasModel(true);
+      setBackendMessage(`Backend connected: ${result.data.version}`);
+    } else {
+      setHasModel(false);
+      setBackendMessage(`Backend unavailable: ${result.error}`);
+    }
+
     setTimeout(() => {
       setIsGenerating(false);
-      setHasModel(true);
     }, 4000);
   };
 
@@ -111,6 +123,9 @@ export default function ThreeDDesign() {
               </>
             )}
           </PrimaryButton>
+          {backendMessage && (
+            <p className="mt-3 text-sm text-muted-foreground">{backendMessage}</p>
+          )}
         </motion.div>
 
         {/* Right Panel: Viewer */}

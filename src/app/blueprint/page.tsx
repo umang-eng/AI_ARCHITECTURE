@@ -25,16 +25,28 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getHealth } from "@/lib/api";
 
 export default function BlueprintGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasPreview, setHasPreview] = useState(false);
+  const [backendMessage, setBackendMessage] = useState<string | null>(null);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
+    setBackendMessage(null);
+
+    const result = await getHealth();
+    if (result.success) {
+      setBackendMessage(`Backend connected: ${result.data.version}`);
+      setHasPreview(true);
+    } else {
+      setBackendMessage(`Backend unavailable: ${result.error}`);
+      setHasPreview(false);
+    }
+
     setTimeout(() => {
       setIsGenerating(false);
-      setHasPreview(true);
     }, 3000);
   };
 
@@ -171,6 +183,11 @@ export default function BlueprintGenerator() {
               </>
             )}
           </PrimaryButton>
+          {backendMessage && (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {backendMessage}
+            </p>
+          )}
         </motion.div>
 
         {/* Right Column: Preview Area */}

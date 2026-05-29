@@ -11,6 +11,7 @@ interface CardProps {
   description?: string;
   noPadding?: boolean;
   hover?: boolean;
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
 }
 
 export const Card = ({ 
@@ -19,7 +20,8 @@ export const Card = ({
   title, 
   description, 
   noPadding = false,
-  hover = true
+  hover = true,
+  onClick,
 }: CardProps) => {
   return (
     <motion.div
@@ -30,6 +32,7 @@ export const Card = ({
         !noPadding && "p-6",
         className
       )}
+      onClick={onClick}
     >
       {(title || description) && (
         <div className={cn("mb-6 space-y-1", noPadding && "p-6 pb-0")}>

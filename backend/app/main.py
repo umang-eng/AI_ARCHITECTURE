@@ -1,14 +1,14 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from datetime import datetime
+from datetime import datetime, timezone
 
-from app.core.config import settings
-from app.middleware.common import ErrorHandlingMiddleware, LoggingMiddleware
-from app.api.v1.api import api_router
-from app.utils.logging import setup_logging
+from .core.config import settings
+from .middleware.common import ErrorHandlingMiddleware, LoggingMiddleware
+from .api.v1.api import api_router
+from .utils.logging import setup_logging
 
 # Setup structured logging
 setup_logging()
@@ -45,5 +45,5 @@ async def health_check():
     return {
         "status": "healthy",
         "version": settings.VERSION,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }

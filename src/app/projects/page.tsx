@@ -27,8 +27,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { getProjects } from "@/lib/api";
+import type { Project } from "@/types/api";
 
-const projects = [
+const demoProjects = [
   {
     id: 1,
     name: "Luxury Villa",
@@ -71,12 +73,57 @@ const cardVariants = {
 };
 
 export default function ProjectsPage() {
+  const [backendError, setBackendError] = useState<string | null>(null);
+  const [projects, setProjects] = useState<Project[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(timer);
+    async function loadProjects() {
+      setLoading(true);
+      const result = await getProjects();
+      if (result.success) {
+        setProjects(result.data);
+        setBackendError(null);
+      } else {
+        setProjects([]);
+        setBackendError(result.error);
+      }
+      setLoading(false);
+    }
+
+    loadProjects();
   }, []);
+
+  const activeProjects = projects && projects.length ? projects : demoProjects;
+
+  const getProjectName = (project: Project | typeof demoProjects[number]) =>
+    "project_name" in project ? project.project_name : project.name;
+
+  const getProjectType = (project: Project | typeof demoProjects[number]) =>
+    "building_type" in project ? project.building_type : project.type;
+
+  const getProjectDate = (project: Project | typeof demoProjects[number]) =>
+    "created_at" in project
+      ? new Date(project.created_at).toLocaleDateString(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        })
+      : project.createdDate;
+
+  const getProjectImage = (project: Project | typeof demoProjects[number]) =>
+    "image" in project
+      ? project.image
+      : "https://images.unsplash.com/photo-1505691938895-1758d7feb511?q=80&w=2070&auto=format&fit=crop";
+
+  const getProjectStatus = (project: Project | typeof demoProjects[number]) => {
+    const status = project.status;
+    if (status === "completed" || status === "Completed") return "Completed";
+    if (status === "in_progress" || status === "In Progress") return "In Progress";
+    if (status === "review" || status === "Review") return "Review";
+    if (status === "draft" || status === "Draft") return "Draft";
+    return status;
+  };
 
   return (
     <PageContainer>
@@ -89,6 +136,12 @@ export default function ProjectsPage() {
           New Project
         </PrimaryButton>
       </SectionHeader>
+
+      {backendError && (
+        <div className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Unable to fetch live projects from the backend: {backendError}. If you are not signed in, please authenticate or continue with demo projects.
+        </div>
+      )}
 
       {/* Search and Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-12">
@@ -132,14 +185,14 @@ export default function ProjectsPage() {
               </div>
             ))
           ) : (
-            projects.map((project) => (
+            (projects && projects.length ? projects : demoProjects).map((project) => (
               <motion.div key={project.id} variants={cardVariants}>
                 <Card className="group p-0 h-full border-border/40 flex flex-col">
                   {/* Project Preview Image */}
                   <div className="aspect-[16/10] relative overflow-hidden bg-sidebar-background">
                     <img
-                      src={project.image}
-                      alt={project.name}
+                      src={getProjectImage(project)}
+                      alt={getProjectName(project)}
                       className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
                     />
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

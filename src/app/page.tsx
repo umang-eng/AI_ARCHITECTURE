@@ -1,9 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Card } from "@/components/ui-custom/Card";
 import { PrimaryButton } from "@/components/ui-custom/Buttons";
+import { cn } from "@/lib/utils";
+import { getHealth } from "@/lib/api";
 import { motion } from "framer-motion";
 import {
   Sparkles,
@@ -56,6 +59,33 @@ const itemVariants = {
 };
 
 export default function Home() {
+  const router = useRouter();
+  const [selectedChip, setSelectedChip] = useState<string>(optionChips[0]);
+  const [backendHealthy, setBackendHealthy] = useState<boolean | null>(null);
+  const [backendStatus, setBackendStatus] = useState<string>("Checking backend connectivity...");
+
+  const handleStartProject = () => router.push('/projects');
+  const handleViewAll = () => router.push('/projects');
+  const handleProjectClick = (projectId: number) => router.push('/projects');
+  const handlePreviewClick = () => router.push('/3d-design');
+
+  useEffect(() => {
+    getHealth()
+      .then((result) => {
+        if (result.success) {
+          setBackendHealthy(result.data.status === "healthy");
+          setBackendStatus(`Backend ${result.data.status} • ${result.data.version}`);
+        } else {
+          setBackendHealthy(false);
+          setBackendStatus(result.error);
+        }
+      })
+      .catch((error) => {
+        setBackendHealthy(false);
+        setBackendStatus(String(error));
+      });
+  }, []);
+
   return (
     <PageContainer className="flex flex-col items-center py-12 md:py-20">
       <motion.div 
@@ -81,6 +111,15 @@ export default function Home() {
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             Transform your architectural vision into blueprints, floor plans, and 3D designs in minutes with our advanced AI engine.
           </p>
+          <div className="inline-flex items-center justify-center gap-2 mx-auto rounded-full border px-4 py-2 text-sm font-semibold text-foreground/70 shadow-sm transition-all">
+            <span className={cn(
+              "inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.25em]",
+              backendHealthy === true ? "bg-emerald-500/10 text-emerald-600 border border-emerald-200" : "bg-amber-500/10 text-amber-700 border border-amber-200"
+            )}>
+              {backendHealthy === true ? "Backend connected" : backendHealthy === false ? "Backend unreachable" : "Checking backend"}
+            </span>
+            <span className="hidden sm:inline">{backendStatus}</span>
+          </div>
         </motion.div>
 
         {/* Section 2: Architecture Preview Card */}
@@ -88,6 +127,7 @@ export default function Home() {
           <Card 
             noPadding 
             className="aspect-video w-full bg-sidebar-background flex items-center justify-center border-dashed border-2 border-border/60 overflow-hidden relative group cursor-pointer"
+            onClick={handlePreviewClick}
           >
             <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-10 group-hover:opacity-20 transition-opacity duration-700" />
             <motion.div 
@@ -122,22 +162,36 @@ export default function Home() {
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-3">
-            {optionChips.map((chip) => (
-              <motion.button
-                key={chip}
-                whileHover={{ scale: 1.05, backgroundColor: "#fff" }}
-                whileTap={{ scale: 0.95 }}
-                className="px-6 py-2.5 rounded-full bg-white border border-border/40 text-sm font-semibold text-muted-foreground hover:text-foreground transition-all shadow-sm hover:shadow-md"
-              >
-                {chip}
-              </motion.button>
-            ))}
+            {optionChips.map((chip) => {
+              const isSelected = chip === selectedChip;
+              return (
+                <motion.button
+                  key={chip}
+                  type="button"
+                  whileHover={{ scale: 1.05, backgroundColor: "#fff" }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setSelectedChip(chip)}
+                  className={cn(
+                    "px-6 py-2.5 rounded-full border text-sm font-semibold transition-all shadow-sm",
+                    isSelected
+                      ? "bg-primary text-white border-primary"
+                      : "bg-white border-border/40 text-muted-foreground hover:text-foreground hover:border-primary/50 hover:shadow-md"
+                  )}
+                >
+                  {chip}
+                </motion.button>
+              );
+            })}
           </div>
         </motion.div>
 
         {/* Section 5: Start Project Button */}
         <motion.div variants={itemVariants}>
-          <PrimaryButton className="h-16 px-12 text-xl flex items-center gap-3 group">
+          <PrimaryButton
+            type="button"
+            className="h-16 px-12 text-xl flex items-center gap-3 group"
+            onClick={handleStartProject}
+          >
             Start Project 
             <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
           </PrimaryButton>
@@ -147,7 +201,11 @@ export default function Home() {
         <motion.div variants={itemVariants} className="w-full pt-16 space-y-8">
           <div className="flex items-center justify-between px-2">
             <h3 className="text-2xl font-bold tracking-tight">Recent Projects</h3>
-            <button className="text-sm font-bold text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
+            <button
+              type="button"
+              onClick={handleViewAll}
+              className="text-sm font-bold text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
+            >
               View All <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -156,6 +214,7 @@ export default function Home() {
               <Card
                 key={project.id}
                 className="text-left group cursor-pointer p-6"
+                onClick={() => handleProjectClick(project.id)}
               >
                 <div className="space-y-6">
                   <div className="p-4 rounded-2xl bg-sidebar-background w-fit group-hover:bg-primary/5 transition-colors">
