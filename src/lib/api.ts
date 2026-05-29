@@ -4,6 +4,7 @@ import type {
   BuildingDesign,
   BuildingDesignCreatePayload,
   AuthTokenResponse,
+  BuildingRequirements,
 } from "@/types/api";
 
 const API_HOST = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -106,3 +107,19 @@ export function removeAccessToken() {
 export function getAccessToken(): string | null {
   return getStoredToken();
 }
+
+export async function extractRequirements(prompt: string) {
+  return request<BuildingRequirements>("/api/v1/architect/extract-requirements", {
+    method: "POST",
+    body: JSON.stringify({ prompt }),
+  });
+}
+
+export async function analyzePrompt(prompt: string) {
+  return request<{ success: boolean; requirements: BuildingRequirements }>("/api/v1/architect/analyze", {
+    method: "POST",
+    body: JSON.stringify({ prompt }),
+  });
+}
+
+
