@@ -208,11 +208,11 @@ export default function ProjectsPage() {
                     <div className="absolute top-4 right-4">
                       <span className={cn(
                         "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md shadow-sm border",
-                        project.status === "Completed" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
-                        project.status === "In Progress" ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
+                        getProjectStatus(project) === "Completed" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                        getProjectStatus(project) === "In Progress" ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
                         "bg-amber-500/10 text-amber-600 border-amber-500/20"
                       )}>
-                        {project.status}
+                        {getProjectStatus(project)}
                       </span>
                     </div>
                   </div>
@@ -222,16 +222,16 @@ export default function ProjectsPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="space-y-2">
                         <h3 className="font-bold text-xl tracking-tight group-hover:text-primary transition-colors leading-tight">
-                          {project.name}
+                          {getProjectName(project)}
                         </h3>
                         <div className="flex items-center gap-4 text-xs font-semibold text-muted-foreground uppercase tracking-widest">
                           <span className="flex items-center gap-1.5">
                             <Building2 className="w-3.5 h-3.5" />
-                            {project.type}
+                            {getProjectType(project)}
                           </span>
                           <span className="flex items-center gap-1.5">
                             <Calendar className="w-3.5 h-3.5" />
-                            {project.createdDate}
+                            {getProjectDate(project)}
                           </span>
                         </div>
                       </div>
