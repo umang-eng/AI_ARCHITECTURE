@@ -1,189 +1,117 @@
+"""Tests for the architect API endpoints — blueprint generation, variation, validation."""
 import pytest
 from httpx import AsyncClient
-from app.ai.manager import ai_manager
-
-class MockAIProvider:
-    def __init__(self, response=None, error=None):
-        self.response = response
-        self.error = error
-        self.calls = []
-
-    async def generate_json(self, **kwargs):
-        self.calls.append(kwargs)
-        if self.error:
-            raise self.error
-        return self.response
-
-    async def get_model_info(self):
-        return {"provider": "mock"}
 
 
 @pytest.mark.asyncio
-async def test_extract_requirements_api_success(client: AsyncClient, monkeypatch):
-    mock_payload = {
-        "json": {
-            "building_type": "commercial",
-            "style": "industrial",
-            "plot": {"width": 150.0, "length": 200.0, "unit": "m"},
-            "floors": 3,
-            "bedrooms": 0,
-            "bathrooms": 4,
-            "features": ["loading dock", "high ceilings"],
-            "budget": 2500000.0,
-            "parking_spaces": 15,
-            "garden": False,
-            "swimming_pool": False,
-            "office_room": True,
-        }
-    }
-    mock_provider = MockAIProvider(response=mock_payload)
-    
-    # Monkeypatch get_provider on the global ai_manager to return our MockAIProvider
-    monkeypatch.setattr(ai_manager, "get_provider", lambda *args, **kwargs: mock_provider)
-
-    response = await client.post(
-        "/api/v1/architect/extract-requirements",
-        json={"prompt": "Design a 3-floor industrial office on a 150x200m plot with parking and loading docks."}
-    )
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert data["building_type"] == "commercial"
-    assert data["style"] == "industrial"
-    assert data["plot"]["width"] == 150.0
-    assert data["plot"]["length"] == 200.0
-    assert data["floors"] == 3
-    assert "loading dock" in data["features"]
-
-
-@pytest.mark.asyncio
-async def test_extract_requirements_api_validation_failure(client: AsyncClient, monkeypatch):
-    # LLM returns invalid data (e.g. missing required floors or plot schema)
-    mock_payload = {
-        "json": {
-            "building_type": "residential"
-            # plot and floors are missing but required
-        }
-    }
-    mock_provider = MockAIProvider(response=mock_payload)
-    monkeypatch.setattr(ai_manager, "get_provider", lambda *args, **kwargs: mock_provider)
-
-    response = await client.post(
-        "/api/v1/architect/extract-requirements",
-        json={"prompt": "Design a small cottage."}
-    )
-    
-    assert response.status_code == 422
-    data = response.json()
-    assert "errors" in data["detail"]
-    assert "message" in data["detail"]
-
-
-@pytest.mark.asyncio
-async def test_extract_requirements_api_provider_failure(client: AsyncClient, monkeypatch):
-    mock_provider = MockAIProvider(error=RuntimeError("DeepSeek API is rate limited"))
-    monkeypatch.setattr(ai_manager, "get_provider", lambda *args, **kwargs: mock_provider)
-
-    response = await client.post(
-        "/api/v1/architect/extract-requirements",
-        json={"prompt": "A futuristic dome house."}
-    )
-    
-    assert response.status_code == 500
-    data = response.json()
-    assert "DeepSeek API is rate limited" in data["detail"]
-
-
-@pytest.mark.asyncio
-async def test_extract_requirements_api_empty_prompt(client: AsyncClient):
-    # Tests standard Pydantic validation on request body
-    response = await client.post(
-        "/api/v1/architect/extract-requirements",
-        json={"prompt": ""}
-    )
-    assert response.status_code == 422
-
-
-@pytest.mark.asyncio
-async def test_analyze_api_success(client: AsyncClient, monkeypatch):
-    mock_payload = {
-        "json": {
-            "building_type": "residential",
-            "style": "modern",
-            "plot": {"width": 60.0, "length": 80.0, "unit": "ft"},
-            "floors": 2,
-            "bedrooms": 4,
-            "bathrooms": 3,
-            "features": ["swimming pool"],
-            "budget": 500000.0,
-            "parking_spaces": 2,
-            "garden": True,
-            "swimming_pool": True,
-            "office_room": False,
-        }
-    }
-    mock_provider = MockAIProvider(response=mock_payload)
-    monkeypatch.setattr(ai_manager, "get_provider", lambda *args, **kwargs: mock_provider)
-
-    response = await client.post(
-        "/api/v1/architect/analyze",
-        json={"prompt": "Build a modern villa on a 60x80 plot with 4 bedrooms and a swimming pool"}
-    )
-
+async def test_generate_blueprint_success(client: AsyncClient):
+    response = await client.post("/api/v1/architect/generate-blueprint", json={
+        "plot_width": 60,
+        "plot_height": 80,
+        "bedrooms": 4,
+        "bathrooms": 2,
+        "floors": 2,
+        "building_type": "villa",
+        "style": "modern",
+        "variant": "A",
+        "project_name": "Test Blueprint",
+    })
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
-    assert data["requirements"]["building_type"] == "residential"
-    assert data["requirements"]["style"] == "modern"
-    assert data["requirements"]["plot"]["width"] == 60.0
-    assert data["requirements"]["plot"]["length"] == 80.0
-    assert data["requirements"]["floors"] == 2
-    assert data["requirements"]["bedrooms"] == 4
-    assert data["requirements"]["swimming_pool"] is True
+    assert "blueprint" in data
+    assert "validation" in data
+    assert len(data["blueprint"]["rooms"]) > 0
+    assert len(data["blueprint"]["walls"]) > 0
 
 
 @pytest.mark.asyncio
-async def test_analyze_api_validation_failure(client: AsyncClient, monkeypatch):
-    mock_payload = {
-        "json": {
-            "building_type": "residential"
-            # Missing required fields like floors, plot, bedrooms, bathrooms, style
-        }
-    }
-    mock_provider = MockAIProvider(response=mock_payload)
-    monkeypatch.setattr(ai_manager, "get_provider", lambda *args, **kwargs: mock_provider)
-
-    response = await client.post(
-        "/api/v1/architect/analyze",
-        json={"prompt": "Short prompt."}
-    )
-
-    assert response.status_code == 422
+async def test_generate_blueprint_default_params(client: AsyncClient):
+    response = await client.post("/api/v1/architect/generate-blueprint", json={})
+    assert response.status_code == 200
     data = response.json()
-    assert "errors" in data["detail"]
-    assert "message" in data["detail"]
+    assert data["success"] is True
+    assert data["blueprint"]["plot"]["width"] == 60
+    assert data["blueprint"]["plot"]["height"] == 80
 
 
 @pytest.mark.asyncio
-async def test_analyze_api_provider_failure(client: AsyncClient, monkeypatch):
-    mock_provider = MockAIProvider(error=RuntimeError("Provider offline"))
-    monkeypatch.setattr(ai_manager, "get_provider", lambda *args, **kwargs: mock_provider)
+async def test_generate_blueprint_all_variants(client: AsyncClient):
+    for variant in ["A", "B", "C", "D", "E"]:
+        response = await client.post("/api/v1/architect/generate-blueprint", json={
+            "plot_width": 60,
+            "plot_height": 80,
+            "bedrooms": 3,
+            "bathrooms": 2,
+            "variant": variant,
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True, f"Variant {variant} failed: {data['validation']}"
+        assert len(data["blueprint"]["rooms"]) > 0
 
-    response = await client.post(
-        "/api/v1/architect/analyze",
-        json={"prompt": "A modern treehouse."}
-    )
 
-    assert response.status_code == 500
+@pytest.mark.asyncio
+async def test_generate_variation(client: AsyncClient):
+    # First generate a blueprint
+    gen_response = await client.post("/api/v1/architect/generate-blueprint", json={
+        "plot_width": 60,
+        "plot_height": 80,
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "variant": "A",
+    })
+    blueprint = gen_response.json()["blueprint"]
+
+    # Then generate a variation
+    response = await client.post("/api/v1/architect/generate-variation", json={
+        "blueprint": blueprint,
+        "variant": "B",
+    })
+    assert response.status_code == 200
     data = response.json()
-    assert "Provider offline" in data["detail"]
+    assert data["success"] is True
+    assert len(data["blueprint"]["rooms"]) > 0
 
 
 @pytest.mark.asyncio
-async def test_analyze_api_empty_prompt(client: AsyncClient):
-    response = await client.post(
-        "/api/v1/architect/analyze",
-        json={"prompt": ""}
-    )
-    assert response.status_code == 422
+async def test_validate_blueprint_valid(client: AsyncClient):
+    gen_response = await client.post("/api/v1/architect/generate-blueprint", json={
+        "plot_width": 60,
+        "plot_height": 80,
+        "bedrooms": 3,
+        "bathrooms": 2,
+    })
+    blueprint = gen_response.json()["blueprint"]
 
+    response = await client.post("/api/v1/architect/validate-blueprint", json={
+        "blueprint": blueprint,
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert "validation" in data
+    assert "valid" in data["validation"]
+
+
+@pytest.mark.asyncio
+async def test_health_check(client: AsyncClient):
+    response = await client.get("/api/v1/architect/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "healthy"
+
+
+@pytest.mark.asyncio
+async def test_generate_blueprint_bedroom_count(client: AsyncClient):
+    response = await client.post("/api/v1/architect/generate-blueprint", json={
+        "plot_width": 80,
+        "plot_height": 100,
+        "bedrooms": 6,
+        "bathrooms": 3,
+        "variant": "C",
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    bedroom_count = sum(1 for r in data["blueprint"]["rooms"] if r["room_type"] == "bedroom")
+    assert bedroom_count == 6

@@ -36,6 +36,32 @@ class BuildingRequirements(BaseModel):
 class Room(BaseModel):
     name: str
     area_m2: float
+    x: float = Field(..., description="x-coordinate of room top-left relative to plot (0 to plot width)")
+    y: float = Field(..., description="y-coordinate of room top-left relative to plot (0 to plot length)")
+    width: float = Field(..., description="width of room in plot units")
+    length: float = Field(..., description="length of room in plot units")
+
+
+class Door(BaseModel):
+    x: float = Field(..., description="x-coordinate of door center relative to plot")
+    y: float = Field(..., description="y-coordinate of door center relative to plot")
+    orientation: str = Field("horizontal", description="orientation of the wall: horizontal or vertical")
+    swing: str = Field("inward-left", description="inward-left, inward-right, outward-left, outward-right")
+
+
+class Window(BaseModel):
+    x: float = Field(..., description="x-coordinate of window center relative to plot")
+    y: float = Field(..., description="y-coordinate of window center relative to plot")
+    width: float = Field(..., description="width of window segment")
+    orientation: str = Field("horizontal", description="orientation of the wall: horizontal or vertical")
+
+
+class Staircase(BaseModel):
+    x: float = Field(..., description="x-coordinate of stairs top-left relative to plot")
+    y: float = Field(..., description="y-coordinate of stairs top-left relative to plot")
+    width: float = Field(..., description="width of stairs box")
+    length: float = Field(..., description="length of stairs box")
+    direction: str = Field("up", description="climbing direction: up or down")
 
 
 class BuildingDesign(BaseModel):
@@ -47,6 +73,9 @@ class BuildingDesign(BaseModel):
     floors: Optional[int] = None
     total_area_m2: Optional[float] = None
     rooms: List[Room] = Field(default_factory=list)
+    doors: List[Door] = Field(default_factory=list)
+    windows: List[Window] = Field(default_factory=list)
+    stairs: List[Staircase] = Field(default_factory=list)
     footprint_m2: Optional[float] = None
     estimated_cost_usd: Optional[float] = None
     notes: Optional[str] = None

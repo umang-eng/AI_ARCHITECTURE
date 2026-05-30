@@ -59,3 +59,48 @@ export interface BuildingRequirements {
   office_room?: boolean | null;
 }
 
+export interface AIRoom {
+  name: string;
+  area_m2: number;
+  x: number;
+  y: number;
+  width: number;
+  length: number;
+}
+
+export interface AIDoor {
+  x: number;
+  y: number;
+  orientation: string;
+  swing: string;
+}
+
+export interface AIWindow {
+  x: number;
+  y: number;
+  width: number;
+  orientation: string;
+}
+
+export interface AIStaircase {
+  x: number;
+  y: number;
+  width: number;
+  length: number;
+  direction: string;
+}
+
+export interface AIDesignLayout {
+  id?: string;
+  name: string;
+  summary: string;
+  floors?: number;
+  total_area_m2?: number;
+  rooms: AIRoom[];
+  doors: AIDoor[];
+  windows: AIWindow[];
+  stairs: AIStaircase[];
+  footprint_m2?: number;
+  estimated_cost_usd?: number;
+  notes?: string;
+}

@@ -274,8 +274,8 @@ async def test_mock_mode_without_api_key(monkeypatch):
 
     assert result["success"] is True
     assert isinstance(result["json"], dict)
-    # Mock envelope should contain structured key
-    assert "structured" in result["json"] or "mock" in result["json"]
+    # Mock envelope extracts the "structured" sub-dict which has building specifications
+    assert "building_type" in result["json"] or "mock" in result["json"]
 
 
 @pytest.mark.asyncio

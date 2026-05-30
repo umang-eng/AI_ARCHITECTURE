@@ -36,8 +36,8 @@ class FakeProvider:
         self.error = error
         self.calls: list = []
 
-    async def generate_json(self, **kwargs):
-        self.calls.append(kwargs)
+    async def generate_json(self, *args, **kwargs):
+        self.calls.append({"args": args, **kwargs})
         if self.error:
             raise self.error
         return self.response
@@ -378,7 +378,7 @@ async def test_generate_design_success():
         "summary": "A stunning modern villa with open layout.",
         "floors": 2,
         "total_area_m2": 350.0,
-        "rooms": [{"name": "Master Bedroom", "area_m2": 30.0}],
+        "rooms": [{"name": "Master Bedroom", "area_m2": 30.0, "x": 0.0, "y": 0.0, "width": 5.0, "length": 6.0}],
         "footprint_m2": 175.0,
         "estimated_cost_usd": 480000.0,
         "notes": "South-facing orientation recommended.",

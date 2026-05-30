@@ -9,6 +9,8 @@ from typing import Any, Dict, Optional
 import httpx
 
 from app.ai.providers.base_provider import BaseAIProvider
+from app.ai.monitoring import ai_call_context
+from app.ai.middleware import track_ai_call
 
 logger = logging.getLogger(__name__)
 
@@ -52,13 +54,28 @@ class DeepSeekProvider(BaseAIProvider):
             headers["Authorization"] = f"Bearer {self.api_key}"
 
         if not self.api_key:
+            # Parse user prompt to generate friendly mock descriptions
+            prompt_preview = (payload.get("prompt") or "")[:200]
             return {
                 "success": True,
                 "status": 200,
                 "json": {
                     "mock": True,
-                    "text": f"[MOCK] DeepSeek generated text for model={self.default_model_name}",
-                    "structured": {"note": "mock-structured-output", "preview": (payload.get("prompt") or "")[:200]},
+                    "text": f"[MOCK] DeepSeek generated architectural design based on: {prompt_preview}",
+                    "structured": {
+                        "building_type": "residential",
+                        "style": "modern",
+                        "plot": {"width": 60.0, "length": 90.0, "unit": "ft"},
+                        "floors": 2,
+                        "bedrooms": 4,
+                        "bathrooms": 3,
+                        "features": ["swimming pool", "open kitchen", "rooftop garden", "home office"],
+                        "budget": 650000.0,
+                        "parking_spaces": 2,
+                        "garden": True,
+                        "swimming_pool": True,
+                        "office_room": True
+                    },
                 },
                 "raw": None,
                 "error": None,
@@ -78,6 +95,9 @@ class DeepSeekProvider(BaseAIProvider):
                         parsed = resp.json()
                     except Exception:
                         parsed = None
+
+                    if parsed is not None:
+                        ai_call_context.set(parsed)
 
                     if 200 <= status < 300:
                         return {"success": True, "status": status, "json": parsed, "raw": text, "error": None}
@@ -102,6 +122,7 @@ class DeepSeekProvider(BaseAIProvider):
 
         return {"success": False, "status": None, "json": None, "raw": None, "error": str(last_exc) if last_exc else "unknown_error"}
 
+    @track_ai_call
     async def generate_text(
         self,
         prompt: str,
@@ -156,6 +177,7 @@ class DeepSeekProvider(BaseAIProvider):
                 "model": kwargs.get("model") or self.default_model_name,
             }
 
+    @track_ai_call
     async def generate_json(
         self,
         prompt: str,
@@ -171,6 +193,7 @@ class DeepSeekProvider(BaseAIProvider):
             "model": model or self.default_model_name,
             "messages": self._build_messages(prompt, system_prompt),
             "response_format": {"type": "json_object"},
+            "temperature": kwargs.get("temperature", 0.75),
         }
         if schema is not None:
             payload["json_schema"] = schema

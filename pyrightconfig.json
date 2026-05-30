@@ -5,10 +5,14 @@
   "exclude": [
     "**/__pycache__"
   ],
-  "analysis": {
-    "extraPaths": [
-      "backend"
-    ],
-    "typeCheckingMode": "basic"
-  }
+  "executionEnvironments": [
+    {
+      "root": "backend",
+      "venvPath": ".",
+      "venv": ".venv",
+      "extraPaths": [
+        "."
+      ]
+    }
+  ]
 }

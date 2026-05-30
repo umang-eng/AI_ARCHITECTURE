@@ -5,6 +5,7 @@ import type {
   BuildingDesignCreatePayload,
   AuthTokenResponse,
   BuildingRequirements,
+  AIDesignLayout,
 } from "@/types/api";
 
 const API_HOST = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -20,7 +21,7 @@ function getStoredToken(): string | null {
   return window.localStorage.getItem("access_token");
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<ApiResult<T>> {
+export async function request<T>(path: string, options?: RequestInit): Promise<ApiResult<T>> {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const url = `${API_HOST}${normalizedPath}`;
 
@@ -121,5 +122,20 @@ export async function analyzePrompt(prompt: string) {
     body: JSON.stringify({ prompt }),
   });
 }
+
+export async function generateDesign(requirements: BuildingRequirements, prompt?: string) {
+  return request<{ success: boolean; design: AIDesignLayout }>("/api/v1/architect/generate-design", {
+    method: "POST",
+    body: JSON.stringify({ requirements, prompt }),
+  });
+}
+
+export async function generateDesignFromPrompt(prompt: string) {
+  return request<{ success: boolean; requirements: BuildingRequirements; design: AIDesignLayout }>("/api/v1/architect/generate-design-from-prompt", {
+    method: "POST",
+    body: JSON.stringify({ prompt }),
+  });
+}
+
 
 

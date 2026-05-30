@@ -33,15 +33,18 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: list[str] = ["pdf", "png", "jpg", "jpeg", "dwg"]
 
     # AI Providers
-    DEFAULT_AI_PROVIDER: str = "openai"
+    DEFAULT_AI_PROVIDER: str = "deepseek"
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-4-turbo"
     CLAUDE_API_KEY: Optional[str] = None
     CLAUDE_MODEL: str = "claude-3-5-sonnet-20240620"
     GEMINI_API_KEY: Optional[str] = None
-    GEMINI_MODEL: str = "gemini-1.5-pro"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
     DEEPSEEK_API_KEY: Optional[str] = None
+    DEEPSEEK_API_URL: Optional[str] = None
     DEEPSEEK_MODEL: str = "deepseek-chat"
+    LOCAL_MODEL_URL: Optional[str] = "http://localhost:11434/v1"
+    LOCAL_MODEL_NAME: str = "llama3"
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
