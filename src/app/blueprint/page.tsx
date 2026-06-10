@@ -11,12 +11,10 @@ import {
 import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
 import { useBlueprintStore } from "@/store/blueprint-store";
-import { generateProceduralBlueprint } from "@/blueprint/engine/procedural-generator";
-import { createBlueprint } from "@/blueprint/factory/blueprint-factory";
-import { generateCommands } from "@/blueprint/generators/command-generator";
-import { commandsToExcalidrawElements } from "@/blueprint/renderers/excalidraw-renderer";
+import { runPipeline } from "@/services/blueprint/pipeline";
+import { generateCommandsFromBlueprint } from "@/services/blueprint/command-generator";
+import { renderCommandsToCanvas } from "@/services/canvas/renderer";
 import type { BuildingType, ArchitecturalStyle } from "@/types/blueprint-schema";
-import type { PlacedRoom } from "@/blueprint/engine/layout-engine/placement-algorithm";
 import type { BlueprintSchema } from "@/types/blueprint-schema";
 
 const BlueprintCanvas = dynamic(() => import("@/components/blueprint/BlueprintCanvas"), { ssr: false });
@@ -49,36 +47,6 @@ const EXAMPLE_PROMPTS = [
   "Minimalist office with meeting rooms",
 ];
 
-function wrapBlueprint(bp: any, variant: string): BlueprintSchema {
-  return {
-    project: { name: bp.project?.name || "My Blueprint", description: "", building_type: bp.project?.building_type || "villa", style: bp.project?.style || "modern", date: new Date().toISOString().split("T")[0], version: "1.0" },
-    plot: bp.plot,
-    floors: bp.floors || [{ level: 0, name: "Ground Floor", height_ft: 10 }],
-    rooms: (bp.rooms || []).map((r: any) => ({
-      id: r.id, name: r.name, room_type: r.type || r.room_type || "generic",
-      x: r.x, y: r.y, width: r.width, height: r.height,
-      level: r.level || 0, color_hex: r.color_hex || "#FFFFFF",
-    })),
-    walls: bp.walls || [],
-    doors: (bp.doors || []).map((d: any) => ({
-      id: d.id, x: d.x, y: d.y, width: d.width,
-      orientation: d.orientation || "horizontal", is_main_entrance: d.is_main_entrance || false,
-    })),
-    windows: (bp.windows || []).map((w: any) => ({
-      id: w.id, x: w.x, y: w.y, width: w.width, orientation: w.orientation || "horizontal",
-    })),
-    stairs: bp.stairs || [],
-    metadata: {
-      generated_by: "AI Architect Engine",
-      generation_timestamp: new Date().toISOString(),
-      engine_version: "3.0",
-      variant,
-      validation_status: "valid",
-      validation_errors: [],
-    },
-  };
-}
-
 export default function BlueprintPage() {
   const store = useBlueprintStore();
   const [showVersions, setShowVersions] = useState(false);
@@ -88,17 +56,23 @@ export default function BlueprintPage() {
     store.setGenerating(true);
     store.setError(null);
     try {
-      const procedural = generateProceduralBlueprint({
-        plotWidth: store.plotWidth, plotHeight: store.plotHeight,
-        bedrooms: store.bedrooms, bathrooms: store.bathrooms,
-        floors: store.floors, buildingType: store.buildingType, style: store.style,
+      const result = await runPipeline({
+        prompt: store.prompt,
+        plotWidth: store.plotWidth,
+        plotHeight: store.plotHeight,
+        bedrooms: store.bedrooms,
+        bathrooms: store.bathrooms,
+        floors: store.floors,
+        buildingType: store.buildingType,
+        style: store.style,
+        variant: store.variant,
       });
-      const blueprint = createBlueprint(procedural.plot.width, procedural.plot.height, procedural.rooms as PlacedRoom[]);
-      const commands = generateCommands(blueprint);
-      const elements = commandsToExcalidrawElements(commands);
-      const wrappedBlueprint = wrapBlueprint(blueprint, store.variant);
-      store.setBlueprint(wrappedBlueprint, elements);
-      store.addVersion(wrappedBlueprint, store.variant);
+      if (result.success && result.wrappedBlueprint) {
+        store.setBlueprint(result.wrappedBlueprint, result.elements);
+        store.addVersion(result.wrappedBlueprint, store.variant);
+      } else {
+        store.setError(result.error || "Generation failed");
+      }
     } catch (err: any) {
       store.setError(err?.message || "Generation failed");
     } finally {
@@ -111,17 +85,23 @@ export default function BlueprintPage() {
     store.setGenerating(true);
     store.setError(null);
     try {
-      const procedural = generateProceduralBlueprint({
-        plotWidth: store.plotWidth, plotHeight: store.plotHeight,
-        bedrooms: store.bedrooms, bathrooms: store.bathrooms,
-        floors: store.floors, buildingType: store.buildingType, style: store.style,
+      const result = await runPipeline({
+        prompt: store.prompt,
+        plotWidth: store.plotWidth,
+        plotHeight: store.plotHeight,
+        bedrooms: store.bedrooms,
+        bathrooms: store.bathrooms,
+        floors: store.floors,
+        buildingType: store.buildingType,
+        style: store.style,
+        variant: v,
       });
-      const blueprint = createBlueprint(procedural.plot.width, procedural.plot.height, procedural.rooms as PlacedRoom[]);
-      const commands = generateCommands(blueprint);
-      const elements = commandsToExcalidrawElements(commands);
-      const wrappedBlueprint = wrapBlueprint(blueprint, v);
-      store.setBlueprint(wrappedBlueprint, elements);
-      store.addVersion(wrappedBlueprint, v);
+      if (result.success && result.wrappedBlueprint) {
+        store.setBlueprint(result.wrappedBlueprint, result.elements);
+        store.addVersion(result.wrappedBlueprint, v);
+      } else {
+        store.setError(result.error || "Variant generation failed");
+      }
     } catch (err: any) {
       store.setError(err?.message || "Variant generation failed");
     } finally {
@@ -471,14 +451,14 @@ export default function BlueprintPage() {
                                   const loaded = store.loadVersion(i);
                                   if (loaded) {
                                     const bp = v.blueprint;
-                                    const cmds = generateCommands({
+                                    const cmds = generateCommandsFromBlueprint({
                                       plot: bp.plot,
                                       rooms: bp.rooms.map((r: any) => ({ id: r.id, name: r.name, type: r.room_type || "generic", x: r.x, y: r.y, width: r.width, height: r.height })),
                                       doors: bp.doors.map((d: any) => ({ id: d.id, x: d.x, y: d.y, width: d.width })),
                                       windows: bp.windows.map((w: any) => ({ id: w.id, x: w.x, y: w.y, width: w.width })),
                                     });
-                                    const elems = commandsToExcalidrawElements(cmds);
-                                    store.setBlueprint(v.blueprint, elems);
+                                    const { elements } = renderCommandsToCanvas(cmds);
+                                    store.setBlueprint(v.blueprint, elements);
                                   }
                                 }}
                                 className={cn(

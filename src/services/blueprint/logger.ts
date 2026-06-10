@@ -52,20 +52,20 @@ class PipelineLogger {
     }
   }
 
-  debug(stage: string, message: string, data?: unknown) {
-    this.log("debug", stage, message, data);
+  debug(stage: string, message: string, data?: unknown, duration?: number) {
+    this.log("debug", stage, message, data, duration);
   }
 
-  info(stage: string, message: string, data?: unknown) {
-    this.log("info", stage, message, data);
+  info(stage: string, message: string, data?: unknown, duration?: number) {
+    this.log("info", stage, message, data, duration);
   }
 
-  warn(stage: string, message: string, data?: unknown) {
-    this.log("warn", stage, message, data);
+  warn(stage: string, message: string, data?: unknown, duration?: number) {
+    this.log("warn", stage, message, data, duration);
   }
 
-  error(stage: string, message: string, data?: unknown) {
-    this.log("error", stage, message, data);
+  error(stage: string, message: string, data?: unknown, duration?: number) {
+    this.log("error", stage, message, data, duration);
   }
 
   stageStart(stage: string): () => number {

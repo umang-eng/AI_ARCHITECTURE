@@ -5,7 +5,7 @@ import { Excalidraw } from "@excalidraw/excalidraw";
 import { exportToSvg, exportToBlob } from "@excalidraw/excalidraw";
 import { useBlueprintStore } from "@/store/blueprint-store";
 
-const EMPTY_INITIAL_DATA = { elements: [] };
+const EMPTY_ELEMENTS: any[] = [];
 
 export default function ExcalidrawWrapper() {
   const excalidrawAPIRef = useRef<any>(null);
@@ -13,57 +13,53 @@ export default function ExcalidrawWrapper() {
   const excalidrawElements = useBlueprintStore((s) => s.excalidrawElements);
   const updateExcalidrawElements = useBlueprintStore((s) => s.updateExcalidrawElements);
   const [isReady, setIsReady] = useState(false);
-  const prevBlueprintId = useRef<string | null>(null);
+  const prevElementsLen = useRef(0);
   const isSyncing = useRef(false);
   const mountedRef = useRef(true);
-  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      timersRef.current.forEach(clearTimeout);
-      timersRef.current = [];
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
 
   useEffect(() => {
     if (!excalidrawAPIRef.current || !isReady) return;
     if (excalidrawElements.length === 0) return;
+    if (excalidrawElements.length === prevElementsLen.current) return;
 
-    const blueprintId = blueprint?.metadata?.generation_timestamp || "";
-    if (blueprintId === prevBlueprintId.current) return;
-    prevBlueprintId.current = blueprintId;
-
+    prevElementsLen.current = excalidrawElements.length;
     isSyncing.current = true;
 
     const api = excalidrawAPIRef.current;
+
     api.updateScene({ elements: excalidrawElements });
 
-    const t1 = setTimeout(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
       if (!mountedRef.current) return;
       try {
         api.scrollToContent(excalidrawElements, {
           fitToViewport: true,
-          viewportZoomFactor: 0.88,
+          viewportZoomFactor: 0.9,
         });
       } catch {
         // silently ignore
       }
-      const t2 = setTimeout(() => {
-        if (mountedRef.current) {
-          isSyncing.current = false;
-        }
-      }, 400);
-      timersRef.current.push(t2);
-    }, 200);
-    timersRef.current.push(t1);
+      setTimeout(() => {
+        if (mountedRef.current) isSyncing.current = false;
+      }, 500);
+    }, 300);
+  }, [excalidrawElements, isReady]);
 
-    return () => {
-      timersRef.current.forEach(clearTimeout);
-      timersRef.current = [];
-    };
-  }, [excalidrawElements, isReady, blueprint]);
+  useEffect(() => {
+    if (blueprint) {
+      prevElementsLen.current = 0;
+    }
+  }, [blueprint]);
 
   const handleReady = useCallback((api: any) => {
     excalidrawAPIRef.current = api;
@@ -114,12 +110,11 @@ export default function ExcalidrawWrapper() {
   }, [exportSVG, exportPNG]);
 
   return (
-    <div style={{ width: "100%", height: "100%" }}>
+    <div style={{ width: "100%", height: "100%", position: "relative" }}>
       <Excalidraw
         excalidrawAPI={handleReady}
         onChange={handleChange}
-        initialData={EMPTY_INITIAL_DATA as any}
-        zenModeEnabled={true}
+        initialData={{ elements: EMPTY_ELEMENTS } as any}
         UIOptions={{
           canvasActions: {
             loadScene: false,

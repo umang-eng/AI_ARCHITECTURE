@@ -1,8 +1,6 @@
 import { BlueprintCommand } from "../commands/command";
 import { CommandType } from "../commands/command-types";
 
-const SCALE = 16;
-
 let _seed = 42;
 function nextSeed(): number {
   _seed = (_seed * 16807 + 0) % 2147483647;
@@ -11,10 +9,6 @@ function nextSeed(): number {
 
 export function resetSeed(seed?: number): void {
   _seed = seed ?? 42;
-}
-
-function s(v: number): number {
-  return Math.round(v * SCALE);
 }
 
 export function commandsToExcalidrawElements(
@@ -27,21 +21,21 @@ export function commandsToExcalidrawElements(
       case CommandType.DRAW_PLOT: {
         const p = cmd.payload;
         elements.push({
-          id: `plot_border`,
+          id: "plot_border",
           type: "rectangle",
           x: 0,
           y: 0,
-          width: s(p.width),
-          height: s(p.height),
+          width: p.width,
+          height: p.height,
           strokeColor: "#1e2530",
-          backgroundColor: "#f8f9fa",
+          backgroundColor: "#f0f0f0",
           fillStyle: "solid",
-          strokeWidth: 3,
+          strokeWidth: 2,
           strokeStyle: "solid",
           roughness: 0,
           opacity: 100,
           angle: 0,
-          groupIds: [],
+          groupIds: ["plot"],
           frameId: null,
           roundness: { type: 3 },
           seed: nextSeed(),
@@ -61,10 +55,10 @@ export function commandsToExcalidrawElements(
         elements.push({
           id: `room_${p.id}`,
           type: "rectangle",
-          x: s(p.x),
-          y: s(p.y),
-          width: s(p.width),
-          height: s(p.height),
+          x: p.x,
+          y: p.y,
+          width: p.width,
+          height: p.height,
           strokeColor: "#1e2530",
           backgroundColor: "#ffffff",
           fillStyle: "solid",
@@ -72,7 +66,7 @@ export function commandsToExcalidrawElements(
           roughness: 0,
           opacity: 100,
           angle: 0,
-          groupIds: [],
+          groupIds: [`room_${p.id}`],
           frameId: null,
           roundness: { type: 3 },
           seed: nextSeed(),
@@ -89,15 +83,17 @@ export function commandsToExcalidrawElements(
 
       case CommandType.DRAW_TEXT: {
         const p = cmd.payload;
-        const fontSize = 14;
-        const textWidth = p.text.length * 7;
+        const fontSize = 20;
+        const charWidth = fontSize * 0.6;
+        const textW = p.text.length * charWidth;
+        const textH = fontSize * 1.25;
         elements.push({
           id: `text_${p.id}`,
           type: "text",
-          x: s(p.x) - textWidth / 2,
-          y: s(p.y) - fontSize / 2,
-          width: textWidth,
-          height: fontSize * 1.25,
+          x: p.x - textW / 2,
+          y: p.y - textH / 2,
+          width: textW,
+          height: textH,
           text: p.text,
           fontSize,
           fontFamily: 1,
@@ -130,15 +126,13 @@ export function commandsToExcalidrawElements(
 
       case CommandType.DRAW_DOOR: {
         const p = cmd.payload;
-        const doorW = s(p.width || 3);
-        const doorH = s(0.25);
         elements.push({
           id: `door_${p.id}`,
           type: "rectangle",
-          x: s(p.x) - doorW / 2,
-          y: s(p.y) - doorH / 2,
-          width: doorW,
-          height: doorH,
+          x: p.x - (p.width || 3) / 2,
+          y: p.y - 0.2,
+          width: p.width || 3,
+          height: 0.4,
           strokeColor: "#e11d48",
           backgroundColor: "#e11d48",
           fillStyle: "solid",
@@ -163,15 +157,13 @@ export function commandsToExcalidrawElements(
 
       case CommandType.DRAW_WINDOW: {
         const p = cmd.payload;
-        const winW = s(p.width || 4);
-        const winH = s(0.2);
         elements.push({
           id: `window_${p.id}`,
           type: "rectangle",
-          x: s(p.x) - winW / 2,
-          y: s(p.y) - winH / 2,
-          width: winW,
-          height: winH,
+          x: p.x - (p.width || 4) / 2,
+          y: p.y - 0.15,
+          width: p.width || 4,
+          height: 0.3,
           strokeColor: "#0ea5e9",
           backgroundColor: "#0ea5e9",
           fillStyle: "solid",
@@ -199,11 +191,11 @@ export function commandsToExcalidrawElements(
         elements.push({
           id: `dim_${p.id}`,
           type: "line",
-          x: s(p.x1),
-          y: s(p.y1),
-          width: Math.abs(s(p.x2) - s(p.x1)),
-          height: Math.abs(s(p.y2) - s(p.y1)),
-          points: [[0, 0], [s(p.x2) - s(p.x1), s(p.y2) - s(p.y1)]],
+          x: p.x1,
+          y: p.y1,
+          width: Math.abs(p.x2 - p.x1),
+          height: Math.abs(p.y2 - p.y1),
+          points: [[0, 0], [p.x2 - p.x1, p.y2 - p.y1]],
           strokeColor: "#4f46e5",
           backgroundColor: "transparent",
           fillStyle: "solid",
