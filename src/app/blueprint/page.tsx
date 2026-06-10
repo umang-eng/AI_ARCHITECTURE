@@ -149,7 +149,7 @@ export default function BlueprintPage() {
   }, [store.blueprint]);
 
   return (
-    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-[#f8f9fa]">
+    <div className="fixed inset-0 w-screen h-screen overflow-visible bg-[#f8f9fa]">
       {/* ═══ FULL-SCREEN CANVAS ═══ */}
       <div className="absolute inset-0 z-0">
         <AnimatePresence mode="wait">
@@ -203,74 +203,15 @@ export default function BlueprintPage() {
         </AnimatePresence>
       </div>
 
-      {/* ═══ FLOATING TOOLBAR (top-right) ═══ */}
-      {store.blueprint && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="fixed top-4 right-4 z-30 flex items-center gap-1.5 bg-white/90 backdrop-blur-xl rounded-2xl px-2 py-1.5 shadow-lg border border-border/30"
-        >
-          {/* Status */}
-          <div className="flex items-center gap-2 px-2 mr-1">
-            <span className="text-[11px] font-bold text-foreground">
-              {store.blueprint.rooms.length} rooms
-            </span>
-            <span className="text-[10px] text-muted-foreground">
-              {store.blueprint.plot.width}x{store.blueprint.plot.height} ft
-            </span>
-            <span className={cn(
-              "text-[9px] font-bold px-1.5 py-0.5 rounded-full",
-              store.blueprint.metadata.validation_status === "valid"
-                ? "bg-emerald-100 text-emerald-700"
-                : "bg-amber-100 text-amber-700"
-            )}>
-              {store.blueprint.metadata.validation_status.toUpperCase()}
-            </span>
-          </div>
-
-          <div className="h-5 w-px bg-border/40" />
-
-          {/* Variant Switcher */}
-          <div className="flex bg-sidebar-background/80 p-0.5 rounded-xl gap-0.5">
-            {VARIANTS.map((v) => (
-              <button key={v} onClick={() => handleVariantChange(v)}
-                className={cn(
-                  "w-7 h-7 rounded-lg text-[10px] font-bold transition-all",
-                  store.variant === v ? "bg-emerald-500 text-white shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-white/50"
-                )}>
-                {v}
-              </button>
-            ))}
-          </div>
-
-          <div className="h-5 w-px bg-border/40" />
-
-          {/* Exports */}
-          <button onClick={handleExportSVG}
-            className="flex items-center gap-1 px-2 h-7 rounded-lg text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-sidebar-background/80 transition-all">
-            <Download className="w-3 h-3" /> SVG
-          </button>
-          <button onClick={handleExportPNG}
-            className="flex items-center gap-1 px-2 h-7 rounded-lg text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-sidebar-background/80 transition-all">
-            <ImageIcon className="w-3 h-3" /> PNG
-          </button>
-          <button onClick={handleExportJSON}
-            className="flex items-center gap-1 px-2 h-7 rounded-lg text-[10px] font-bold text-muted-foreground hover:text-foreground hover:bg-sidebar-background/80 transition-all">
-            <Code className="w-3 h-3" /> JSON
-          </button>
-        </motion.div>
-      )}
-
-      {/* ═══ FLOATING BOTTOM SPECS BAR ═══ */}
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 w-[calc(100vw-100px)] max-w-[1100px]">
         <motion.div
           layout
-          className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-border/30 overflow-hidden"
+          className="bg-white/90 backdrop-blur-xl rounded-[28px] shadow-[0_22px_50px_rgba(15,23,42,0.06)] border border-slate-200/60 overflow-hidden"
         >
           {/* Specs Header - always visible */}
           <button
             onClick={() => setShowSpecs(!showSpecs)}
-            className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-sidebar-background/50 transition-colors"
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-100 transition-colors"
           >
             <div className="flex items-center gap-2">
               <Settings2 className="w-4 h-4 text-primary" />
@@ -420,6 +361,21 @@ export default function BlueprintPage() {
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                    <button onClick={handleExportSVG}
+                      className="inline-flex w-full justify-center items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold text-slate-700 hover:border-slate-300 hover:bg-white transition-all">
+                      <Download className="w-3 h-3" /> Export SVG
+                    </button>
+                    <button onClick={handleExportPNG}
+                      className="inline-flex w-full justify-center items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold text-slate-700 hover:border-slate-300 hover:bg-white transition-all">
+                      <ImageIcon className="w-3 h-3" /> Export PNG
+                    </button>
+                    <button onClick={handleExportJSON}
+                      className="inline-flex w-full justify-center items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold text-slate-700 hover:border-slate-300 hover:bg-white transition-all">
+                      <Code className="w-3 h-3" /> Export JSON
+                    </button>
                   </div>
 
                   {/* Error */}

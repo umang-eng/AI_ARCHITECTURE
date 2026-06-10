@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Geist } from "next/font/google";
 import "./globals.css";
+import "@excalidraw/excalidraw/index.css";
 import { cn } from "@/lib/utils";
 import AppLayout from "@/components/layout/AppLayout";
 

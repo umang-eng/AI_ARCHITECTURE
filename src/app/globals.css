@@ -80,3 +80,30 @@ body {
 .animate-shimmer {
   animation: shimmer 2s infinite;
 }
+
+/* Blueprint canvas grid overlay */
+.blueprint-grid-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(148, 163, 184, 0.14) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.14) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Clean Excalidraw blueprint canvas with hidden menus */
+.excalidraw .App-menu,
+.excalidraw .App-menu_top,
+.excalidraw .App-menu_bottom,
+.excalidraw .App-menu_left,
+.excalidraw .App-menu_right,
+.excalidraw .App-menu__left,
+.excalidraw .layer-ui__wrapper__top-right {
+  display: none !important;
+}
+
+.excalidraw .main-canvas {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+}
