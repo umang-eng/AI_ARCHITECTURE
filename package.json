@@ -9,7 +9,8 @@
     "dev:full": "concurrently \"npm run dev\" \"npm run backend:start\"",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "generate-dataset": "tsx scripts/generate-dataset.ts"
   },
   "keywords": [],
   "author": "",
@@ -50,6 +51,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.0",
-    "concurrently": "^10.0.0"
+    "concurrently": "^10.0.0",
+    "tsx": "^4.22.3"
   }
 }

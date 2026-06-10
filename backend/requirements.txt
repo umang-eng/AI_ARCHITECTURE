@@ -15,3 +15,10 @@ slowapi>=0.1.9
 python-json-logger>=2.0.7
 psycopg2-binary>=2.9.9
 email-validator>=2.1.0.post1
+# PEFT/QLoRA inference
+torch>=2.1.0
+transformers>=4.40.0
+peft>=0.11.0
+bitsandbytes>=0.43.0
+accelerate>=0.30.0
+safetensors>=0.4.0

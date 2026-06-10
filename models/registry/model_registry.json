@@ -1,0 +1,65 @@
+{
+  "version": "1.0",
+  "base_models": {
+    "qwen-3b": {
+      "name": "Qwen/Qwen2.5-3B-Instruct",
+      "type": "causal_lm",
+      "dtype": "bfloat16",
+      "quantization": "4bit",
+      "description": "Qwen 2.5 3B parameter instruct model"
+    },
+    "qwen-7b": {
+      "name": "Qwen/Qwen2.5-7B-Instruct",
+      "type": "causal_lm",
+      "dtype": "bfloat16",
+      "quantization": "4bit",
+      "description": "Qwen 2.5 7B parameter instruct model"
+    },
+    "qwen-vl-3b": {
+      "name": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "type": "vision_language",
+      "dtype": "bfloat16",
+      "quantization": "4bit",
+      "description": "Qwen 2.5 3B vision-language model"
+    }
+  },
+  "adapters": {
+    "blueprint_v1": {
+      "path": "models/adapters/blueprint_v1",
+      "base_model": "qwen-3b",
+      "description": "Blueprint generation from natural language - v1",
+      "task_type": "blueprint_generation",
+      "peft_type": "LORA",
+      "r": 16,
+      "lora_alpha": 32,
+      "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj"],
+      "created_at": "2026-06-10",
+      "active": true
+    },
+    "furniture_designer_v1": {
+      "path": "models/adapters/furniture_designer_v1",
+      "base_model": "qwen-3b",
+      "description": "Furniture design generation - v1 (planned)",
+      "task_type": "furniture_design",
+      "peft_type": "LORA",
+      "r": 16,
+      "lora_alpha": 32,
+      "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj"],
+      "created_at": null,
+      "active": false
+    },
+    "interior_designer_v1": {
+      "path": "models/adapters/interior_designer_v1",
+      "base_model": "qwen-3b",
+      "description": "Interior design generation - v1 (planned)",
+      "task_type": "interior_design",
+      "peft_type": "LORA",
+      "r": 16,
+      "lora_alpha": 32,
+      "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj"],
+      "created_at": null,
+      "active": false
+    }
+  },
+  "active_adapter": "blueprint_v1"
+}

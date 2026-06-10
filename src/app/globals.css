@@ -55,7 +55,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
@@ -80,4 +79,9 @@ body {
 
 .animate-shimmer {
   animation: shimmer 2s infinite;
+}
+
+/* Excalidraw zen-mode: hide the welcome screen & zen-mode exit hint */
+.excalidraw .zen-mode-exit-hint {
+  display: none !important;
 }

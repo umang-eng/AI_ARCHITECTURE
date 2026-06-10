@@ -14,8 +14,7 @@ import {
   Banknote,
   Settings,
   Plus,
-  Menu,
-  X,
+  ChevronLeft,
 } from "lucide-react";
 
 const navItems = [
@@ -23,88 +22,150 @@ const navItems = [
   { name: "Projects", href: "/projects", icon: Folder },
   { name: "Blueprint", href: "/blueprint", icon: Ruler },
   { name: "3D Design", href: "/3d-design", icon: Box },
-  { name: "Interior Design", href: "/interior-design", icon: Armchair },
-  { name: "Cost Estimation", href: "/cost-estimation", icon: Banknote },
+  { name: "Interior", href: "/interior-design", icon: Armchair },
+  { name: "Cost", href: "/cost-estimation", icon: Banknote },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
+const SIDEBAR_COLLAPSED = 60;
+const SIDEBAR_EXPANDED = 220;
+
 export const Sidebar = () => {
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const sidebarContent = (
-    <div className="flex flex-col h-full bg-sidebar-background border-r border-border/40">
-      {/* Top: Branding */}
-      <div className="p-8 flex items-center justify-between">
-        <h1 className="text-xl font-bold tracking-tight text-foreground">
-          AI Architect
-        </h1>
-        <button 
-          className="lg:hidden p-2 rounded-lg hover:bg-white/50"
-          onClick={() => setIsOpen(false)}
-        >
-          <X className="w-5 h-5" />
-        </button>
+    <div
+      className={cn(
+        "flex flex-col h-full bg-white/90 backdrop-blur-xl border-r border-border/30 shadow-lg transition-all duration-300 ease-out",
+        isHovered ? "w-[220px]" : "w-[60px]"
+      )}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Top: Branding + Toggle */}
+      <div className="flex items-center h-14 px-3 border-b border-border/20">
+        <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
+            <Ruler className="w-4 h-4 text-white" />
+          </div>
+          <AnimatePresence>
+            {isHovered && (
+              <motion.span
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: "auto" }}
+                exit={{ opacity: 0, width: 0 }}
+                className="text-sm font-bold text-foreground whitespace-nowrap overflow-hidden"
+              >
+                AI Architect
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Middle: Navigation */}
-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
+      <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto custom-scrollbar">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
               key={item.name}
               href={item.href}
-              onClick={() => setIsOpen(false)}
               className={cn(
-                "flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-[12px] transition-all duration-200 group",
+                "flex items-center gap-3 h-10 rounded-xl transition-all duration-200 group relative",
+                isHovered ? "px-3" : "px-0 justify-center",
                 isActive
-                  ? "bg-white text-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-white/50 hover:text-foreground"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-primary/5 hover:text-foreground"
               )}
             >
-              <item.icon className={cn(
-                "w-5 h-5 transition-transform duration-200 group-hover:scale-110",
-                isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-              )} />
-              {item.name}
+              <item.icon
+                className={cn(
+                  "w-[18px] h-[18px] shrink-0 transition-colors",
+                  isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                )}
+              />
+              <AnimatePresence>
+                {isHovered && (
+                  <motion.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: "auto" }}
+                    exit={{ opacity: 0, width: 0 }}
+                    className="text-[13px] font-medium whitespace-nowrap overflow-hidden"
+                  >
+                    {item.name}
+                  </motion.span>
+                )}
+              </AnimatePresence>
               {isActive && (
                 <motion.div
-                  layoutId="active-nav"
-                  className="ml-auto w-1.5 h-1.5 rounded-full bg-primary"
+                  layoutId="sidebar-active"
+                  className={cn(
+                    "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-primary",
+                    !isHovered && "left-1/2 -translate-x-1/2 top-auto -translate-y-0 bottom-1 w-1 h-1 rounded-full"
+                  )}
                 />
+              )}
+              {/* Tooltip when collapsed */}
+              {!isHovered && (
+                <div className="absolute left-full ml-2 px-2 py-1 bg-foreground text-white text-xs rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                  {item.name}
+                </div>
               )}
             </Link>
           );
         })}
       </nav>
 
-      {/* Bottom: Version & User Info */}
-      <div className="p-4 border-t border-border/40 space-y-4">
-        <motion.button 
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 rounded-[12px] font-medium shadow-sm hover:opacity-95 transition-all"
+      {/* Bottom: New Project + User */}
+      <div className="p-2 space-y-2 border-t border-border/20">
+        <Link
+          href="/blueprint"
+          className={cn(
+            "flex items-center h-10 rounded-xl bg-primary text-primary-foreground transition-all duration-200",
+            isHovered ? "px-3 gap-2 justify-center" : "justify-center px-0"
+          )}
         >
-          <Plus className="w-4 h-4" />
-          New Project
-        </motion.button>
-        
-        <div className="flex items-center gap-3 px-4 py-2 hover:bg-white/50 rounded-[12px] cursor-pointer transition-colors group">
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary group-hover:bg-primary/20 transition-colors">
+          <Plus className="w-4 h-4 shrink-0" />
+          <AnimatePresence>
+            {isHovered && (
+              <motion.span
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: "auto" }}
+                exit={{ opacity: 0, width: 0 }}
+                className="text-[13px] font-medium whitespace-nowrap overflow-hidden"
+              >
+                New Blueprint
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </Link>
+
+        {/* User Avatar */}
+        <div
+          className={cn(
+            "flex items-center h-10 rounded-xl transition-all duration-200",
+            isHovered ? "px-3 gap-2" : "justify-center px-0"
+          )}
+        >
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
             UA
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">Umang Agrawal</p>
-            <p className="text-xs text-muted-foreground truncate">Lead Architect</p>
-          </div>
-        </div>
-
-        <div className="px-4 py-2 flex items-center justify-between">
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
-            Version 1.0
-          </p>
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <AnimatePresence>
+            {isHovered && (
+              <motion.div
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: "auto" }}
+                exit={{ opacity: 0, width: 0 }}
+                className="min-w-0 overflow-hidden"
+              >
+                <p className="text-[11px] font-medium text-foreground truncate">Umang Agrawal</p>
+                <p className="text-[9px] text-muted-foreground truncate">Lead Architect</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>
@@ -112,30 +173,37 @@ export const Sidebar = () => {
 
   return (
     <>
-      {/* Mobile Menu Button */}
-      <div className="lg:hidden fixed top-6 left-6 z-50">
-        <button 
-          onClick={() => setIsOpen(true)}
-          className="p-3 rounded-xl bg-white shadow-premium border border-border/40 text-foreground"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-[260px] h-screen fixed left-0 top-0 z-40">
+      {/* Desktop Sidebar - floating */}
+      <aside
+        className="hidden lg:block fixed left-3 top-3 bottom-3 z-40 rounded-2xl overflow-hidden"
+        style={{ width: isHovered ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
         {sidebarContent}
       </aside>
 
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsMobileOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 rounded-xl bg-white/90 backdrop-blur-xl shadow-lg border border-border/30 text-foreground"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="4" x2="20" y1="12" y2="12"/>
+          <line x1="4" x2="20" y1="6" y2="6"/>
+          <line x1="4" x2="20" y1="18" y2="18"/>
+        </svg>
+      </button>
+
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
-        {isOpen && (
+        {isMobileOpen && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
+              onClick={() => setIsMobileOpen(false)}
               className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[60] lg:hidden"
             />
             <motion.aside

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface PageContainerProps {
   children: React.ReactNode;
@@ -16,7 +16,10 @@ export const PageContainer = ({ children, className }: PageContainerProps) => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-      className={cn("flex-1 p-6 md:p-8 lg:p-12 overflow-y-auto h-screen scroll-smooth", className)}
+      className={cn(
+        "flex-1 p-6 md:p-8 lg:p-12 lg:pl-24 overflow-y-auto min-h-screen scroll-smooth",
+        className
+      )}
     >
       <div className="max-w-7xl mx-auto space-y-8 md:space-y-12">
         {children}

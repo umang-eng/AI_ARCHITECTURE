@@ -32,3 +32,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Model weights (large binary files - use DVC or cloud storage)
+models/base/
+models/adapters/*/adapter_model.safetensors
+models/adapters/*/tokenizer.json
+models/adapters/*/training_args.bin
+*.safetensors
+*.bin
+!models/registry/model_registry.json

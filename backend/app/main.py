@@ -1,4 +1,8 @@
 # Trigger hot reload for .env changes 5
+import asyncio
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -11,8 +15,27 @@ from .middleware.common import ErrorHandlingMiddleware, LoggingMiddleware
 from .api.v1.api import api_router
 from .utils.logging import setup_logging
 
+logger = logging.getLogger(__name__)
+
 # Setup structured logging
 setup_logging()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan: optional model pre-loading on startup."""
+    if getattr(settings, "PEFT_LOAD_ON_STARTUP", False):
+        try:
+            logger.info("pre_loading_peft_model_on_startup")
+            from .ai.model_loader import get_model_loader
+            loader = get_model_loader()
+            adapter = getattr(settings, "PEFT_ACTIVE_ADAPTER", "blueprint_v1")
+            await asyncio.to_thread(loader.load, adapter)
+            logger.info("peft_model_pre_loaded", extra={"adapter": adapter})
+        except Exception as exc:
+            logger.warning(f"Failed to pre-load PEFT model: {exc}")
+    yield
+
 
 # Setup rate limiting
 limiter = Limiter(key_func=get_remote_address)
@@ -20,6 +43,7 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan,
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

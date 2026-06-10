@@ -161,19 +161,32 @@ function renderDoor(cmd: BlueprintCommand & { type: "DRAW_DOOR" }): ExcalidrawAn
     }),
   );
 
-  // Door arc (swing indicator)
-  const arcRadius = cmd.width * 1.2;
+  // Door arc (swing indicator) — approximate with a quarter-circle line
+  const arcR = cmd.width * 1.2;
+  const originX = cmd.x - (isH ? cmd.width / 2 : 0);
+  const originY = cmd.y - (isH ? 0 : cmd.width / 2);
+  const arcPoints: [number, number][] = [];
+  const steps = 12;
+  for (let i = 0; i <= steps; i++) {
+    const angle = (Math.PI / 2) * (i / steps);
+    if (isH) {
+      arcPoints.push([cmd.width, arcR * Math.sin(angle)]);
+    } else {
+      arcPoints.push([arcR * Math.sin(angle), cmd.width]);
+    }
+  }
   elements.push(
-    baseElement("arc", `${cmd.id}_arc`, {
-      x: cmd.x - (isH ? cmd.width / 2 : 0),
-      y: cmd.y - (isH ? 0 : cmd.width / 2),
-      width: arcRadius,
-      height: arcRadius,
-      strokeColor: "#222222",
+    baseElement("line", `${cmd.id}_arc`, {
+      x: originX,
+      y: originY,
+      width: arcR,
+      height: arcR,
+      points: arcPoints,
+      strokeColor: "#999999",
       strokeWidth: 1,
       roughness: 0,
-      opacity: 60,
-    } as any),
+      opacity: 50,
+    }),
   );
 
   return elements;

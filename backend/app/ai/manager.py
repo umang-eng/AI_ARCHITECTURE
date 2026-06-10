@@ -37,6 +37,15 @@ class AIManager:
 
     def _initialize_providers(self) -> None:
         """Register configured AI providers based on setting variables."""
+        # 0. PEFT/QLoRA local model (trained adapter on Qwen)
+        try:
+            from app.ai.providers.peft_provider import PeftProvider
+            peft_adapter = getattr(settings, "PEFT_ACTIVE_ADAPTER", "blueprint_v1")
+            self._providers["peft"] = PeftProvider(adapter_name=peft_adapter)
+            logger.info(f"Registered PEFT provider with adapter '{peft_adapter}'")
+        except Exception as exc:
+            logger.debug(f"PEFT provider registration bypassed: {exc}")
+
         # 1. DeepSeek: Default fallback provider (available as a mock if keys are absent)
         self._providers["deepseek"] = DeepSeekProvider(
             api_key=getattr(settings, "DEEPSEEK_API_KEY", None),

@@ -46,6 +46,14 @@ class Settings(BaseSettings):
     LOCAL_MODEL_URL: Optional[str] = "http://localhost:11434/v1"
     LOCAL_MODEL_NAME: str = "llama3"
 
+    # PEFT/QLoRA Model Settings
+    PEFT_MODEL_DIR: str = "models"
+    PEFT_ACTIVE_ADAPTER: str = "blueprint_v1"
+    PEFT_LOAD_IN_4BIT: bool = True
+    PEFT_MAX_NEW_TOKENS: int = 2048
+    PEFT_TEMPERATURE: float = 0.1
+    PEFT_LOAD_ON_STARTUP: bool = False  # Set True to pre-load model at app boot
+
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
 settings = Settings()
