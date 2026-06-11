@@ -136,25 +136,9 @@ body {
   z-index: 1000 !important;
 }
 
-/* Hide Excalidraw hamburger menu button (top-left) */
-.excalidraw .App-menu_button,
-.excalidraw [class*="main-menu-trigger"],
-.excalidraw [class*="dropdown-menu-button"],
-.excalidraw button[data-testid="menu-button"] {
+/* Hide Excalidraw hamburger menu button (top-left three-line icon) */
+.excalidraw button.main-menu-trigger {
   display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  overflow: hidden !important;
-}
-
-/* Hide the entire left toolbar wrapper that contains the hamburger */
-.excalidraw .layer-ui__wrapper__left > .Island:first-child,
-.excalidraw .App-toolbar-container {
-  display: none !important;
-  visibility: hidden !important;
 }
 
 /* Hide left color palette */

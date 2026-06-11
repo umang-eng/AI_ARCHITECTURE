@@ -66,26 +66,11 @@ export default function ExcalidrawWrapper() {
     }
   }, [excalidrawAPI, excalidrawElements]);
 
-  // Hide Excalidraw hamburger menu button
+  // Hide only the Excalidraw hamburger menu button
   useEffect(() => {
     const hideMenuButton = () => {
-      const selectors = [
-        ".excalidraw .dropdown-menu-button.main-menu-trigger",
-        ".excalidraw [class*='main-menu-trigger']",
-        ".excalidraw [class*='App-menu_button']",
-        ".excalidraw button[data-testid='menu-button']",
-      ];
-      for (const sel of selectors) {
-        const btn = document.querySelector<HTMLElement>(sel);
-        if (btn) {
-          btn.style.display = "none";
-          btn.style.visibility = "hidden";
-          btn.style.width = "0";
-          btn.style.height = "0";
-          btn.style.overflow = "hidden";
-          btn.style.pointerEvents = "none";
-        }
-      }
+      const btn = document.querySelector<HTMLElement>(".excalidraw button.main-menu-trigger");
+      if (btn) btn.style.display = "none";
     };
 
     hideMenuButton();
