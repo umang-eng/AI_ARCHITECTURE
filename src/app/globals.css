@@ -81,6 +81,14 @@ body {
   animation: shimmer 2s infinite;
 }
 
+/* Move Excalidraw properties sidebar from left to right side */
+.excalidraw .sidebar {
+  left: auto !important;
+  right: 0 !important;
+  border-left: 1px solid var(--sidebar-border-color) !important;
+  border-right: none !important;
+}
+
 /* Blueprint canvas grid overlay */
 .blueprint-grid-overlay {
   position: absolute;
@@ -93,17 +101,64 @@ body {
   background-size: 40px 40px;
 }
 
-/* Clean Excalidraw blueprint canvas with hidden menus */
-.excalidraw .App-menu,
-.excalidraw .App-menu_top,
-.excalidraw .App-menu_bottom,
-.excalidraw .App-menu_left,
-.excalidraw .App-menu_right,
-.excalidraw .App-menu__left,
-.excalidraw .layer-ui__wrapper__top-right {
-  display: none !important;
-}
-
+/* Blueprint canvas styling */
 .excalidraw .main-canvas {
   background-color: rgba(255, 255, 255, 0.92) !important;
+}
+
+/* Move island properties panel to RIGHT side */
+.excalidraw .Island.App-menu__left,
+.excalidraw .island.App-menu__left {
+  position: fixed !important;
+  right: 0 !important;
+  left: auto !important;
+  top: 100px !important;
+  width: 280px !important;
+  background: white !important;
+  border-left: 1px solid #e5e7eb !important;
+  border-right: none !important;
+  z-index: 1000 !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 12px !important;
+  max-height: calc(100vh - 100px) !important;
+  overflow-y: auto !important;
+  transform: none !important;
+}
+
+/* Move the left wrapper to RIGHT */
+.excalidraw .layer-ui__wrapper__left {
+  position: fixed !important;
+  right: 0 !important;
+  left: auto !important;
+  top: 100px !important;
+  width: 280px !important;
+  z-index: 1000 !important;
+}
+
+/* Hide Excalidraw hamburger menu button (top-left) */
+.excalidraw .App-menu_button,
+.excalidraw [class*="main-menu-trigger"],
+.excalidraw [class*="dropdown-menu-button"],
+.excalidraw button[data-testid="menu-button"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Hide the entire left toolbar wrapper that contains the hamburger */
+.excalidraw .layer-ui__wrapper__left > .Island:first-child,
+.excalidraw .App-toolbar-container {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* Hide left color palette */
+.excalidraw .color-palette-container,
+.excalidraw .palette-container {
+  display: none !important;
 }
