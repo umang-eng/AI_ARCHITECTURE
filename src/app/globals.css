@@ -126,15 +126,7 @@ body {
   transform: none !important;
 }
 
-/* Move the left wrapper to RIGHT */
-.excalidraw .layer-ui__wrapper__left {
-  position: fixed !important;
-  right: 0 !important;
-  left: auto !important;
-  top: 100px !important;
-  width: 280px !important;
-  z-index: 1000 !important;
-}
+/* Do NOT move .layer-ui__wrapper__left — it contains the tools toolbar */
 
 /* Hide Excalidraw hamburger menu button (top-left three-line icon) */
 .excalidraw button.main-menu-trigger {
