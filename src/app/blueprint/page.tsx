@@ -327,14 +327,20 @@ export default function BlueprintPage() {
 
                     {/* Generate */}
                     <PrimaryButton
-                      className="h-[34px] px-5 text-xs flex items-center gap-1.5 shrink-0"
+                      className="h-[40px] px-7 text-[11px] font-bold uppercase tracking-wider flex items-center gap-2 shrink-0 !bg-gradient-to-r !from-indigo-600 !to-violet-600 !text-white rounded-xl shadow-[0_4px_14px_rgba(99,102,241,0.35)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.5)] border-none transition-all duration-300 transform hover:-translate-y-0.5"
                       onClick={handleGenerate}
                       disabled={store.isGenerating}
                     >
                       {store.isGenerating ? (
-                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Gen...</>
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                          <span>Generating...</span>
+                        </>
                       ) : (
-                        <><Wand2 className="w-3.5 h-3.5" /> Generate</>
+                        <>
+                          <Wand2 className="w-3.5 h-3.5 text-white animate-pulse" />
+                          <span>Generate</span>
+                        </>
                       )}
                     </PrimaryButton>
                   </div>
