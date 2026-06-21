@@ -41,4 +41,6 @@ export interface Blueprint {
   doors: Door[];
 
   windows: Window[];
+
+  furniture?: any[];
 }

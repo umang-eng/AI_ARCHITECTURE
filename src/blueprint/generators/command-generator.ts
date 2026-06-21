@@ -1,6 +1,7 @@
 import { Blueprint } from "../types/blueprint";
 import { BlueprintCommand } from "../commands/command";
 import { CommandType } from "../commands/command-types";
+import { generateFurnitureCommands } from "../../furniture/renderers/furniture-renderer";
 
 export function generateCommands(blueprint: Blueprint): BlueprintCommand[] {
   const commands: BlueprintCommand[] = [];
@@ -124,6 +125,12 @@ export function generateCommands(blueprint: Blueprint): BlueprintCommand[] {
         width: win.width,
       },
     });
+  }
+
+  // 5.5. Draw Furniture
+  if (blueprint.furniture && blueprint.furniture.length > 0) {
+    const furnitureCommands = generateFurnitureCommands(blueprint.furniture);
+    commands.push(...furnitureCommands);
   }
 
   // 6. Draw North Arrow (Top-Right Corner of plot)

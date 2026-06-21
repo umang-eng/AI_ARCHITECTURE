@@ -15,6 +15,7 @@ import { autoRepairLayout } from "@/blueprint/repair/auto-repair-engine";
 import { addHistoryEntry } from "@/blueprint/history/generation-history";
 import { computeBlueprintAnalytics } from "@/blueprint/analytics/blueprint-analytics";
 import type { PlacedRoom } from "@/blueprint/engine/layout-engine/placement-algorithm";
+import { generateProceduralFurniture } from "@/furniture/engine/procedural-furniture";
 
 export interface PipelineInput {
   prompt?: string;
@@ -149,6 +150,10 @@ async function runAIPipeline(input: PipelineInput): Promise<PipelineResult> {
     blueprint.windows = repairedBlueprint.windows;
   }
 
+  // 1.8. Generate Furniture
+  const furniture = generateProceduralFurniture(blueprint, input.style);
+  blueprint.furniture = furniture;
+
   // 2. Compute analytics
   const analytics = computeBlueprintAnalytics(blueprint);
 
@@ -207,6 +212,10 @@ function runProceduralPipeline(input: PipelineInput): PipelineResult {
   // 2. Validate final best layout
   const report = validateBlueprint(blueprint, input.floors);
   
+  // 2.5. Generate Furniture
+  const furniture = generateProceduralFurniture(blueprint, input.style);
+  blueprint.furniture = furniture;
+
   // 3. Compute analytics
   const analytics = computeBlueprintAnalytics(blueprint);
 
@@ -297,6 +306,18 @@ function wrapForStore(bp: Blueprint, variant: string, report: ValidationReport) 
       orientation: "horizontal" as const,
     })),
     stairs,
+    furniture: bp.furniture ? bp.furniture.map((f) => ({
+      id: f.id,
+      name: f.name || f.type.toUpperCase(),
+      type: f.type,
+      x: f.x,
+      y: f.y,
+      width: f.width,
+      height: f.height,
+      rotation: f.rotation,
+      color_hex: f.color_hex,
+      room_id: f.roomId
+    })) : [],
     metadata: {
       generated_by: "AI Architect Engine V2",
       generation_timestamp: new Date().toISOString(),

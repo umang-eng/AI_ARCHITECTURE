@@ -92,6 +92,19 @@ export interface StairData {
   direction: "up" | "down";
 }
 
+export interface FurnitureData {
+  id: string;
+  name?: string;
+  type: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  color_hex?: string;
+  room_id: string;
+}
+
 export interface BlueprintMetadata {
   generated_by: string;
   generation_timestamp: string;
@@ -99,6 +112,7 @@ export interface BlueprintMetadata {
   variant: string;
   validation_status: "valid" | "invalid" | "pending";
   validation_errors: string[];
+  validation_score?: number;
 }
 
 export interface BlueprintSchema {
@@ -110,5 +124,6 @@ export interface BlueprintSchema {
   doors: DoorData[];
   windows: WindowData[];
   stairs: StairData[];
+  furniture?: FurnitureData[];
   metadata: BlueprintMetadata;
 }

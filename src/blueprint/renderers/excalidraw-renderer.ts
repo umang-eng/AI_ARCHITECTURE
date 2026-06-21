@@ -579,8 +579,280 @@ export function commandsToExcalidrawElements(
         });
         break;
       }
+
+      case CommandType.DRAW_FURNITURE: {
+        const p = cmd.payload;
+        const angle = (p.rotation * Math.PI) / 180;
+        const groupIds = [p.id];
+
+        const pushSub = (
+          type: string,
+          relX: number,
+          relY: number,
+          w: number,
+          h: number,
+          extra: any = {},
+        ) => {
+          const cos = Math.cos(angle);
+          const sin = Math.sin(angle);
+          const rx = p.x + relX * cos - relY * sin;
+          const ry = p.y + relX * sin + relY * cos;
+
+          elements.push({
+            id: `${type}_sub_${nextSeed()}`,
+            type,
+            x: rx - w / 2,
+            y: ry - h / 2,
+            width: w,
+            height: h,
+            angle,
+            roughness: 0,
+            isDeleted: false,
+            updated: Date.now(),
+            seed: nextSeed(),
+            version: 1,
+            versionNonce: nextSeed(),
+            groupIds,
+            frameId: null,
+            roundness: null,
+            boundElements: null,
+            link: null,
+            locked: false,
+            ...extra,
+          });
+        };
+
+        const pushSubLine = (
+          x1: number,
+          y1: number,
+          x2: number,
+          y2: number,
+          extra: any = {},
+        ) => {
+          const cos = Math.cos(angle);
+          const sin = Math.sin(angle);
+          const rx1 = p.x + x1 * cos - y1 * sin;
+          const ry1 = p.y + x1 * sin + y1 * cos;
+          const rx2 = p.x + x2 * cos - y2 * sin;
+          const ry2 = p.y + x2 * sin + y2 * cos;
+
+          elements.push({
+            id: `line_sub_${nextSeed()}`,
+            type: "line",
+            x: rx1,
+            y: ry1,
+            width: Math.abs(rx2 - rx1),
+            height: Math.abs(ry2 - ry1),
+            points: [[0, 0], [rx2 - rx1, ry2 - ry1]],
+            angle: 0, // line points are already rotated
+            roughness: 0,
+            isDeleted: false,
+            updated: Date.now(),
+            seed: nextSeed(),
+            version: 1,
+            versionNonce: nextSeed(),
+            groupIds,
+            frameId: null,
+            roundness: null,
+            boundElements: null,
+            link: null,
+            locked: false,
+            ...extra,
+          });
+        };
+
+        // 1. Draw solid footprint rectangle
+        pushSub("rectangle", 0, 0, p.width, p.height, {
+          strokeColor: "#475569",
+          backgroundColor: p.color,
+          fillStyle: "solid",
+          strokeWidth: 1.5,
+          opacity: 45,
+          roundness: { type: 3 },
+        });
+
+        // 2. Add high-fidelity furniture icons
+        const type = p.type.toLowerCase();
+
+        if (type.includes("bed")) {
+          // Pillows at the top
+          const pillowW = p.width * 0.35;
+          const pillowH = p.height * 0.15;
+          const pillowY = -p.height / 2 + pillowH / 2 + 0.4;
+          
+          if (type.includes("single")) {
+            pushSub("rectangle", 0, pillowY, pillowW, pillowH, {
+              strokeColor: "#64748b",
+              backgroundColor: "#ffffff",
+              fillStyle: "solid",
+              roundness: { type: 3 },
+            });
+          } else {
+            pushSub("rectangle", -p.width * 0.22, pillowY, pillowW, pillowH, {
+              strokeColor: "#64748b",
+              backgroundColor: "#ffffff",
+              fillStyle: "solid",
+              roundness: { type: 3 },
+            });
+            pushSub("rectangle", p.width * 0.22, pillowY, pillowW, pillowH, {
+              strokeColor: "#64748b",
+              backgroundColor: "#ffffff",
+              fillStyle: "solid",
+              roundness: { type: 3 },
+            });
+          }
+          // Blanket line
+          pushSubLine(-p.width / 2, p.height * 0.1, p.width / 2, p.height * 0.1, {
+            strokeColor: "#64748b",
+            strokeWidth: 1,
+          });
+        } 
+        
+        else if (type.includes("sofa")) {
+          const isL = type.includes("l_sofa");
+          // Armrests
+          const armW = 0.5;
+          pushSub("rectangle", -p.width / 2 + armW / 2, 0, armW, p.height, {
+            strokeColor: "#475569",
+            backgroundColor: "#ffffff",
+            fillStyle: "solid",
+          });
+          pushSub("rectangle", p.width / 2 - armW / 2, 0, armW, p.height, {
+            strokeColor: "#475569",
+            backgroundColor: "#ffffff",
+            fillStyle: "solid",
+          });
+          
+          if (isL) {
+            pushSub("rectangle", 0, p.height / 2 - armW / 2, p.width, armW, {
+              strokeColor: "#475569",
+              backgroundColor: "#ffffff",
+              fillStyle: "solid",
+            });
+          } else {
+            // Seat division lines
+            pushSubLine(-p.width / 2 + armW, -p.height / 2 + 0.8, p.width / 2 - armW, -p.height / 2 + 0.8, {
+              strokeColor: "#475569",
+            });
+            pushSubLine(0, -p.height / 2 + 0.8, 0, p.height / 2, {
+              strokeColor: "#475569",
+            });
+          }
+        } 
+        
+        else if (type.includes("tv_unit")) {
+          // Inner TV screen line
+          pushSubLine(-p.width * 0.35, 0, p.width * 0.35, 0, {
+            strokeColor: "#0f172a",
+            strokeWidth: 2,
+          });
+        } 
+        
+        else if (type.includes("dining_table")) {
+          // Draw place setting circles on the table
+          const settingR = 0.6;
+          pushSub("ellipse", -p.width * 0.25, 0, settingR, settingR, {
+            strokeColor: "#64748b",
+            backgroundColor: "#ffffff",
+            fillStyle: "solid",
+          });
+          pushSub("ellipse", p.width * 0.25, 0, settingR, settingR, {
+            strokeColor: "#64748b",
+            backgroundColor: "#ffffff",
+            fillStyle: "solid",
+          });
+        } 
+        
+        else if (type === "toilet") {
+          // Tank at top
+          pushSub("rectangle", 0, -p.height / 2 + 0.4, p.width * 0.9, 0.7, {
+            strokeColor: "#475569",
+            backgroundColor: "#ffffff",
+            fillStyle: "solid",
+          });
+          // Bowl at center/bottom
+          pushSub("ellipse", 0, 0.3, p.width * 0.8, p.height * 0.6, {
+            strokeColor: "#475569",
+            backgroundColor: "#ffffff",
+            fillStyle: "solid",
+          });
+        } 
+        
+        else if (type === "shower") {
+          // Diagonal corner-to-corner glass lines
+          pushSubLine(-p.width / 2, -p.height / 2, p.width / 2, p.height / 2, {
+            strokeColor: "#38bdf8",
+          });
+        } 
+        
+        else if (type === "wash_basin") {
+          // Outer bowl
+          pushSub("ellipse", 0, 0, p.width * 0.8, p.height * 0.8, {
+            strokeColor: "#475569",
+            backgroundColor: "#ffffff",
+            fillStyle: "solid",
+          });
+          // Drain circle
+          pushSub("ellipse", 0, -0.2, 0.2, 0.2, {
+            strokeColor: "#64748b",
+            backgroundColor: "#64748b",
+            fillStyle: "solid",
+          });
+        }
+
+        // 3. Draw short text label (abbreviated e.g. "TV", "BED", "SOFA")
+        const label = getFurnitureLabel(p.type);
+        const fontSize = 9;
+        const charW = fontSize * 0.65;
+        const textW = label.length * charW;
+        const textH = fontSize * 1.25;
+
+        // Centered label, slightly offset if needed
+        pushSub("text", 0, 0, textW, textH, {
+          text: label,
+          fontSize,
+          fontFamily: 1,
+          textAlign: "center",
+          verticalAlign: "middle",
+          strokeColor: "#0f172a",
+          originalText: label,
+          lineHeight: 1.25,
+        });
+
+        break;
+      }
     }
   }
 
   return elements;
+}
+
+function getFurnitureLabel(type: string): string {
+  const map: Record<string, string> = {
+    sofa: "SOFA",
+    l_sofa: "SOFA",
+    tv_unit: "TV UNIT",
+    coffee_table: "TABLE",
+    side_table: "TABLE",
+    bookshelf: "BOOKS",
+    single_bed: "BED",
+    queen_bed: "BED",
+    king_bed: "BED",
+    wardrobe: "WARDROBE",
+    study_desk: "DESK",
+    dressing_table: "DRESSER",
+    counter: "COUNTER",
+    refrigerator: "FRIDGE",
+    oven: "OVEN",
+    sink: "SINK",
+    dining_table: "DINING",
+    dining_chair: "CHAIR",
+    office_desk: "DESK",
+    office_chair: "CHAIR",
+    office_cabinet: "CABINET",
+    wash_basin: "BASIN",
+    shower: "SHOWER",
+    toilet: "TOILET",
+  };
+  return map[type] || type.toUpperCase();
 }
