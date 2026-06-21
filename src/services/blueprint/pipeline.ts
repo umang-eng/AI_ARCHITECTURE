@@ -1,20 +1,7 @@
 /**
  * Blueprint Pipeline — the complete prompt → AI → JSON → commands → canvas flow.
- *
- * Orchestrates:
- * 1. AI model inference (or procedural fallback)
- * 2. JSON validation
- * 3. Parsing to internal Blueprint type
- * 4. Command generation (with auto doors/windows)
- * 5. Canvas rendering (Excalidraw elements)
- *
- * Supports:
- * - Automatic retry on invalid JSON
- * - JSON repair for malformed output
- * - Procedural fallback when AI model is unavailable
  */
 
-import type { BlueprintAIOutput } from "./schema";
 import type { Blueprint } from "@/blueprint/types/blueprint";
 import { validateAndClean } from "./validator";
 import { parseAIOutputToBlueprint } from "./parser";
@@ -23,6 +10,10 @@ import { renderCommandsToCanvas } from "@/services/canvas/renderer";
 import { pipelineLogger } from "./logger";
 import { generateProceduralBlueprint } from "@/blueprint/engine/procedural-generator";
 import { createBlueprint } from "@/blueprint/factory/blueprint-factory";
+import { validateBlueprint, ValidationReport } from "@/blueprint/validators/blueprint-validator";
+import { autoRepairLayout } from "@/blueprint/repair/auto-repair-engine";
+import { addHistoryEntry } from "@/blueprint/history/generation-history";
+import { computeBlueprintAnalytics } from "@/blueprint/analytics/blueprint-analytics";
 import type { PlacedRoom } from "@/blueprint/engine/layout-engine/placement-algorithm";
 
 export interface PipelineInput {
@@ -140,28 +131,48 @@ async function runAIPipeline(input: PipelineInput): Promise<PipelineResult> {
     return { success: false, blueprint: null, wrappedBlueprint: null, elements: [], source: "ai", error: result.errors.join("; ") };
   }
 
-  pipelineLogger.info("validator", "Validation passed", {
-    rooms: data.rooms.length,
-    doors: data.doors.length,
-    windows: data.windows.length,
-  });
-
   const blueprint = parseAIOutputToBlueprint(data);
-  pipelineLogger.info("parser", "Parsed to internal Blueprint", {
-    rooms: blueprint.rooms.length,
+
+  // 1. Validate & Auto-Repair the AI-generated layout
+  let report = validateBlueprint(blueprint, input.floors);
+  if (!report.valid) {
+    pipelineLogger.warn("pipeline", "AI blueprint failed constraints. Running Auto-Repair...", report.errors);
+    const repairedRooms = autoRepairLayout(blueprint.rooms as any, blueprint.plot.width, blueprint.plot.height);
+    const repairedBlueprint = createBlueprint(blueprint.plot.width, blueprint.plot.height, repairedRooms as any);
+    
+    // Re-verify repaired blueprint
+    report = validateBlueprint(repairedBlueprint, input.floors);
+    
+    // Apply repaired coordinates
+    blueprint.rooms = repairedBlueprint.rooms;
+    blueprint.doors = repairedBlueprint.doors;
+    blueprint.windows = repairedBlueprint.windows;
+  }
+
+  // 2. Compute analytics
+  const analytics = computeBlueprintAnalytics(blueprint);
+
+  // 3. Save to History for RL training
+  addHistoryEntry({
+    prompt: input.prompt || "",
+    blueprint,
+    score: report.score,
+    style: input.style,
+    buildingType: input.buildingType,
+    metadata: {
+      plotWidth: input.plotWidth,
+      plotHeight: input.plotHeight,
+      bedrooms: input.bedrooms,
+      bathrooms: input.bathrooms,
+      floors: input.floors,
+      algorithm: "ai",
+      scoreBreakdown: analytics,
+    },
   });
 
   const commands = generateCommandsFromBlueprint(blueprint);
-  pipelineLogger.info("commands", "Generated commands", {
-    count: commands.length,
-  });
-
   const { elements } = renderCommandsToCanvas(commands);
-  pipelineLogger.info("renderer", "Rendered to canvas", {
-    elements: elements.length,
-  });
-
-  const wrappedBlueprint = wrapForStore(blueprint, input.variant || "A");
+  const wrappedBlueprint = wrapForStore(blueprint, input.variant || "A", report);
 
   return {
     success: true,
@@ -175,6 +186,7 @@ async function runAIPipeline(input: PipelineInput): Promise<PipelineResult> {
 function runProceduralPipeline(input: PipelineInput): PipelineResult {
   const endTimer = pipelineLogger.stageStart("procedural");
 
+  // 1. Multi-Layout Candidate Generation & Evaluation (Module 5)
   const procedural = generateProceduralBlueprint({
     plotWidth: input.plotWidth,
     plotHeight: input.plotHeight,
@@ -183,6 +195,7 @@ function runProceduralPipeline(input: PipelineInput): PipelineResult {
     floors: input.floors,
     buildingType: input.buildingType,
     style: input.style,
+    prompt: input.prompt,
   });
 
   const blueprint = createBlueprint(
@@ -191,27 +204,33 @@ function runProceduralPipeline(input: PipelineInput): PipelineResult {
     procedural.rooms as PlacedRoom[],
   );
 
-  pipelineLogger.info("procedural", "Generated procedural blueprint", {
-    rooms: blueprint.rooms.length,
-    doors: blueprint.doors.length,
-    windows: blueprint.windows.length,
+  // 2. Validate final best layout
+  const report = validateBlueprint(blueprint, input.floors);
+  
+  // 3. Compute analytics
+  const analytics = computeBlueprintAnalytics(blueprint);
+
+  // 4. Save to History
+  addHistoryEntry({
+    prompt: input.prompt || "Procedural Generation",
+    blueprint,
+    score: report.score,
+    style: input.style,
+    buildingType: input.buildingType,
+    metadata: {
+      plotWidth: input.plotWidth,
+      plotHeight: input.plotHeight,
+      bedrooms: input.bedrooms,
+      bathrooms: input.bathrooms,
+      floors: input.floors,
+      algorithm: "procedural",
+      scoreBreakdown: analytics,
+    },
   });
 
   const commands = generateCommandsFromBlueprint(blueprint);
-  pipelineLogger.info("commands", "Generated commands", {
-    count: commands.length,
-  });
-
   const { elements } = renderCommandsToCanvas(commands);
-  pipelineLogger.info("renderer", "Rendered to canvas", {
-    elements: elements.length,
-  });
-
-  const wrappedBlueprint = wrapForStore(blueprint, input.variant || "A");
-
-  pipelineLogger.info("procedural", "Pipeline completed", {
-    duration: endTimer(),
-  });
+  const wrappedBlueprint = wrapForStore(blueprint, input.variant || "A", report);
 
   return {
     success: true,
@@ -222,7 +241,19 @@ function runProceduralPipeline(input: PipelineInput): PipelineResult {
   };
 }
 
-function wrapForStore(bp: Blueprint, variant: string) {
+function wrapForStore(bp: Blueprint, variant: string, report: ValidationReport) {
+  // Map staircase rooms to stairs list in Schema
+  const stairs = bp.rooms
+    .filter((r) => r.type === "staircase")
+    .map((s) => ({
+      id: s.id,
+      x: s.x,
+      y: s.y,
+      width: s.width,
+      height: s.height,
+      direction: "up" as const,
+    }));
+
   return {
     project: {
       name: "My Blueprint",
@@ -232,7 +263,11 @@ function wrapForStore(bp: Blueprint, variant: string) {
       date: new Date().toISOString().split("T")[0],
       version: "1.0",
     },
-    plot: bp.plot,
+    plot: {
+      width: bp.plot.width,
+      height: bp.plot.height,
+      unit: "ft" as const,
+    },
     floors: [{ level: 0, name: "Ground Floor", height_ft: 10 }],
     rooms: bp.rooms.map((r) => ({
       id: r.id,
@@ -251,7 +286,7 @@ function wrapForStore(bp: Blueprint, variant: string) {
       x: d.x,
       y: d.y,
       width: d.width,
-      orientation: "horizontal",
+      orientation: "horizontal" as const,
       is_main_entrance: false,
     })),
     windows: bp.windows.map((w) => ({
@@ -259,16 +294,17 @@ function wrapForStore(bp: Blueprint, variant: string) {
       x: w.x,
       y: w.y,
       width: w.width,
-      orientation: "horizontal",
+      orientation: "horizontal" as const,
     })),
-    stairs: [],
+    stairs,
     metadata: {
-      generated_by: "AI Architect Engine",
+      generated_by: "AI Architect Engine V2",
       generation_timestamp: new Date().toISOString(),
-      engine_version: "3.0",
+      engine_version: "2.0",
       variant,
-      validation_status: "valid" as const,
-      validation_errors: [],
+      validation_status: report.valid ? ("valid" as const) : ("invalid" as const),
+      validation_errors: report.errors,
+      validation_score: report.score,
     },
   };
 }
@@ -286,7 +322,6 @@ function attemptJSONRepair(raw: string): unknown | null {
   try {
     return JSON.parse(cleaned);
   } catch {
-    // Try to extract JSON object
     const objMatch = cleaned.match(/\{[\s\S]*\}/);
     if (objMatch) {
       try {

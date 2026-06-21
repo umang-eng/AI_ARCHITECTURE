@@ -1,108 +1,89 @@
 import { PlacedRoom } from "../layout-engine/placement-algorithm";
-import { centerDistance } from "../geometry/distance";
+import { calculateSpaceUtilization } from "./space-utilization";
+import { calculateCirculationScore } from "./circulation-score";
+import { calculateAdjacencyScore } from "./adjacency-score";
+import { calculateNaturalLightScore } from "./natural-light-score";
+import { calculatePrivacyScore } from "./privacy-score";
+import { calculateExpandabilityScore } from "./expandability-score";
 
 export interface ScoreResult {
   score: number;
   reasons: string[];
+  breakdown: {
+    utilization: number;
+    circulation: number;
+    adjacency: number;
+    daylight: number;
+    privacy: number;
+    expandability: number;
+  };
 }
 
-export function scoreLayout(rooms: PlacedRoom[]): ScoreResult {
-  let score = 0;
+export function scoreLayout(
+  rooms: PlacedRoom[],
+  plotWidth: number = 60,
+  plotHeight: number = 80,
+): ScoreResult {
+  const utilization = calculateSpaceUtilization(rooms, plotWidth, plotHeight);
+  const circulation = calculateCirculationScore(rooms);
+  const adjacency = calculateAdjacencyScore(rooms);
+  const daylight = calculateNaturalLightScore(rooms, plotWidth, plotHeight);
+  const privacy = calculatePrivacyScore(rooms);
+  const expandability = calculateExpandabilityScore(rooms, plotWidth, plotHeight);
+
+  // Weights
+  const wUtilization = 0.20;
+  const wCirculation = 0.20;
+  const wAdjacency = 0.25;
+  const wDaylight = 0.15;
+  const wPrivacy = 0.10;
+  const wExpandability = 0.10;
+
+  const score =
+    utilization * wUtilization +
+    circulation * wCirculation +
+    adjacency * wAdjacency +
+    daylight * wDaylight +
+    privacy * wPrivacy +
+    expandability * wExpandability;
+
   const reasons: string[] = [];
+  if (utilization > 80) reasons.push("Excellent space utilization");
+  else if (utilization < 50) reasons.push("Poor layout/space density");
 
-  const find = (type: string) => rooms.find((r) => r.type === type);
-  const findAll = (type: string) => rooms.filter((r) => r.type === type);
+  if (circulation > 85) reasons.push("Highly walkable corridor circulation");
+  if (adjacency > 80) reasons.push("Optimal room adjacencies");
+  if (daylight > 80) reasons.push("Abundant natural light exposure");
+  if (privacy > 85) reasons.push("Excellent public/private zoning separation");
 
-  const kitchen = find("kitchen");
-  const dining = find("dining");
-  const living = find("livingRoom");
-  const hallway = find("hallway");
-  const bedrooms = findAll("bedroom");
-  const bathrooms = findAll("bathroom");
-
-  // Kitchen near Dining
-  if (kitchen && dining) {
-    const dist = centerDistance(kitchen, dining);
-    if (dist < 20) {
-      score += 10;
-      reasons.push("Kitchen near Dining (+10)");
-    } else {
-      score -= 5;
-      reasons.push("Kitchen far from Dining (-5)");
-    }
-  }
-
-  // Kitchen near Living Room
-  if (kitchen && living) {
-    const dist = centerDistance(kitchen, living);
-    if (dist < 25) {
-      score += 10;
-      reasons.push("Kitchen near Living Room (+10)");
-    } else {
-      score -= 5;
-      reasons.push("Kitchen far from Living Room (-5)");
-    }
-  }
-
-  // Bedroom near Bathroom
-  for (const bedroom of bedrooms) {
-    let nearBath = false;
-    for (const bathroom of bathrooms) {
-      const dist = centerDistance(bedroom, bathroom);
-      if (dist < 25) {
-        nearBath = true;
-        break;
-      }
-    }
-    if (nearBath) {
-      score += 10;
-      reasons.push(`${bedroom.name} near Bathroom (+10)`);
-    } else {
-      score -= 20;
-      reasons.push(`${bedroom.name} far from Bathroom (-20)`);
-    }
-  }
-
-  // Hallway connects rooms
-  if (hallway) {
-    let connectedRooms = 0;
-    for (const room of rooms) {
-      if (room.type === "hallway") continue;
-      const dist = centerDistance(hallway, room);
-      if (dist < 30) connectedRooms++;
-    }
-    if (connectedRooms >= 3) {
-      score += 15;
-      reasons.push(`Hallway connects ${connectedRooms} rooms (+15)`);
-    }
-  }
-
-  // Penalty for no hallway
-  if (!hallway && rooms.length > 5) {
-    score -= 10;
-    reasons.push("No hallway in large layout (-10)");
-  }
-
-  // Bonus for balanced layout
-  const totalArea = rooms.reduce((sum, r) => sum + r.width * r.height, 0);
-  const avgRoomSize = rooms.length > 0 ? totalArea / rooms.length : 0;
-  if (avgRoomSize > 80 && avgRoomSize < 200) {
-    score += 10;
-    reasons.push("Balanced room sizes (+10)");
-  }
-
-  return { score, reasons };
+  return {
+    score: Math.round(score),
+    reasons,
+    breakdown: {
+      utilization: Math.round(utilization),
+      circulation: Math.round(circulation),
+      adjacency: Math.round(adjacency),
+      daylight: Math.round(daylight),
+      privacy: Math.round(privacy),
+      expandability: Math.round(expandability),
+    },
+  };
 }
 
-export function rankLayouts(layouts: PlacedRoom[][]): {
+export function rankLayouts(
+  layouts: PlacedRoom[][],
+  plotWidth: number = 60,
+  plotHeight: number = 80,
+): {
   rooms: PlacedRoom[];
   score: number;
   reasons: string[];
+  breakdown: any;
 }[] {
   return layouts
     .map((rooms) => ({
       rooms,
-      ...scoreLayout(rooms),
+      ...scoreLayout(rooms, plotWidth, plotHeight),
     }))
     .sort((a, b) => b.score - a.score);
 }

@@ -4,6 +4,8 @@ export interface BlueprintVersion {
   version: number;
   seed: number;
   blueprint: any;
+  score: number;
+  prompt: string;
   createdAt: string;
 }
 
