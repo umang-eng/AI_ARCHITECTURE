@@ -45,6 +45,19 @@ export function generateCommands(blueprint: Blueprint): BlueprintCommand[] {
   });
 
   // 3. Draw Rooms, Labels, and Room Dimensions
+  const ROOM_COLORS: Record<string, string> = {
+    livingRoom: "#e8f4f8",
+    kitchen: "#fef3c7",
+    dining: "#fce7f3",
+    hallway: "#f1f5f9",
+    bedroom: "#ede9fe",
+    bathroom: "#dbeafe",
+    garage: "#e2e8f0",
+    office: "#ecfdf5",
+    staircase: "#f8fafc",
+    garden: "#d1fae5",
+  };
+
   for (const room of blueprint.rooms) {
     if (room.type === "staircase") {
       // Draw custom staircase geometric elements instead of normal room rectangle
@@ -72,31 +85,7 @@ export function generateCommands(blueprint: Blueprint): BlueprintCommand[] {
         height: room.height,
         name: room.name,
         roomType: room.type,
-      },
-    });
-
-    // Room Label (Centered)
-    commands.push({
-      type: CommandType.DRAW_TEXT,
-      payload: {
-        id: `text_${room.id}`,
-        x: room.x + room.width / 2,
-        y: room.y + room.height / 2 - 1.5,
-        text: room.name,
-        size: 14,
-      },
-    });
-
-    // Room Measurements (e.g. 12' x 14') drawn below label
-    commands.push({
-      type: CommandType.DRAW_TEXT,
-      payload: {
-        id: `dim_text_${room.id}`,
-        x: room.x + room.width / 2,
-        y: room.y + room.height / 2 + 1.5,
-        text: `${room.width}' x ${room.height}'`,
-        size: 11,
-        color: "#4f46e5",
+        color_hex: (room as any).color_hex || ROOM_COLORS[room.type] || "#ffffff",
       },
     });
   }

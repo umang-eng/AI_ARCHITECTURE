@@ -4,8 +4,7 @@
 
 import { create } from "zustand";
 import type { BlueprintSchema, BuildingType, ArchitecturalStyle } from "@/types/blueprint-schema";
-
-type ExcalidrawElement = any;
+import type { BlueprintCommand } from "@/blueprint/commands/command";
 
 export interface BlueprintVersion {
   id: string;
@@ -15,15 +14,12 @@ export interface BlueprintVersion {
 }
 
 interface BlueprintState {
-  // Current blueprint
   blueprint: BlueprintSchema | null;
-  excalidrawElements: ExcalidrawElement[];
+  blueprintCommands: BlueprintCommand[];
 
-  // UI state
   isGenerating: boolean;
   error: string | null;
 
-  // Generation params
   buildingType: BuildingType;
   style: ArchitecturalStyle;
   plotWidth: number;
@@ -35,24 +31,22 @@ interface BlueprintState {
   projectName: string;
   prompt: string;
 
-  // History
   versions: BlueprintVersion[];
   currentVersionIndex: number;
 
-  // Actions
-  setBlueprint: (blueprint: BlueprintSchema, elements: ExcalidrawElement[]) => void;
+  setBlueprint: (blueprint: BlueprintSchema, commands: BlueprintCommand[]) => void;
   setGenerating: (generating: boolean) => void;
   setError: (error: string | null) => void;
   setParam: <K extends keyof BlueprintState>(key: K, value: BlueprintState[K]) => void;
   addVersion: (blueprint: BlueprintSchema, variant: string) => void;
-  loadVersion: (index: number) => { blueprint: BlueprintSchema; elements: ExcalidrawElement[] } | null;
-  updateExcalidrawElements: (elements: ExcalidrawElement[]) => void;
+  loadVersion: (index: number) => { blueprint: BlueprintSchema; commands: BlueprintCommand[] } | null;
+  updateBlueprintCommands: (commands: BlueprintCommand[]) => void;
   clearBlueprint: () => void;
 }
 
 export const useBlueprintStore = create<BlueprintState>((set, get) => ({
   blueprint: null,
-  excalidrawElements: [],
+  blueprintCommands: [],
 
   isGenerating: false,
   error: null,
@@ -71,8 +65,8 @@ export const useBlueprintStore = create<BlueprintState>((set, get) => ({
   versions: [],
   currentVersionIndex: -1,
 
-  setBlueprint: (blueprint, elements) =>
-    set({ blueprint, excalidrawElements: elements, error: null }),
+  setBlueprint: (blueprint, commands) =>
+    set({ blueprint, blueprintCommands: commands, error: null }),
 
   setGenerating: (generating) => set({ isGenerating: generating }),
 
@@ -99,15 +93,15 @@ export const useBlueprintStore = create<BlueprintState>((set, get) => ({
     if (index < 0 || index >= versions.length) return null;
     const version = versions[index];
     set({ currentVersionIndex: index });
-    return { blueprint: version.blueprint, elements: [] };
+    return { blueprint: version.blueprint, commands: [] };
   },
 
-  updateExcalidrawElements: (elements) => set({ excalidrawElements: elements }),
+  updateBlueprintCommands: (commands) => set({ blueprintCommands: commands }),
 
   clearBlueprint: () =>
     set({
       blueprint: null,
-      excalidrawElements: [],
+      blueprintCommands: [],
       error: null,
       versions: [],
       currentVersionIndex: -1,

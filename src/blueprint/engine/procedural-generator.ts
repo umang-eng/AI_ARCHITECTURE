@@ -31,12 +31,15 @@ export function generateProceduralBlueprint(
   // Track the layout candidate scores for analytics/history
   const candidates: { rooms: PlacedRoom[]; score: number }[] = [];
 
+  // Random seed component changes on each call for unique layouts
+  const randomSeedComponent = Math.floor(Math.random() * 1000000);
+
   // Implement seeded randomness derived from a baseline seed for repeatability
   const baseSeed = requirements.bedrooms * 100 + requirements.bathrooms * 10 + requirements.floors;
 
   for (let i = 0; i < CANDIDATE_COUNT; i++) {
-    // Unique seed per variation
-    const seed = baseSeed + i * 179426549; 
+    // Unique seed per variation with random component
+    const seed = baseSeed + randomSeedComponent + i * 179426549; 
     
     // 1. Placement
     let rooms = placeRooms(

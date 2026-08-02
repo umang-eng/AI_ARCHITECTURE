@@ -14,10 +14,10 @@ export function findPlacement(
   plotWidth: number,
   plotHeight: number,
   existing: Rectangle[],
-  margin: number = 5,
+  margin: number = 1,
 ): PlacementResult | null {
-  for (let y = margin; y + height <= plotHeight - margin; y += 2) {
-    for (let x = margin; x + width <= plotWidth - margin; x += 2) {
+  for (let y = margin; y + height <= plotHeight - margin; y += 1) {
+    for (let x = margin; x + width <= plotWidth - margin; x += 1) {
       const candidate: Rectangle = { x, y, width, height };
       const collision = existing.some((r) => hasCollision(r, candidate));
       if (!collision) {
@@ -37,8 +37,8 @@ export function findPlacementInZone(
   zoneHeight: number,
   existing: Rectangle[],
 ): PlacementResult | null {
-  for (let y = zoneY; y + height <= zoneY + zoneHeight; y += 2) {
-    for (let x = zoneX; x + width <= zoneX + zoneWidth; x += 2) {
+  for (let y = zoneY; y + height <= zoneY + zoneHeight; y += 1) {
+    for (let x = zoneX; x + width <= zoneX + zoneWidth; x += 1) {
       const candidate: Rectangle = { x, y, width, height };
       const collision = existing.some((r) => hasCollision(r, candidate));
       if (!collision) {

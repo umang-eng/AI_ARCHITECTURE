@@ -77,11 +77,9 @@ export default function BlueprintPage() {
   }, []);
 
   const applyVisionState = useCallback((result: VisionAnalysisResult) => {
-    // Generate commands and render to canvas elements
     const commands = VisionCanvasRenderer.convertToCommands(result);
-    const { elements } = renderCommandsToCanvas(commands);
+    const { commands: renderedCommands } = renderCommandsToCanvas(commands);
 
-    // Build BlueprintSchema matching frontend representation
     const bp: BlueprintSchema = {
       project: {
         name: `Vision Plan: ${result.roomType}`,
@@ -158,7 +156,7 @@ export default function BlueprintPage() {
       },
     };
 
-    store.setBlueprint(bp, elements);
+    store.setBlueprint(bp, renderedCommands);
     store.addVersion(bp, "A");
   }, [store]);
 
@@ -230,7 +228,7 @@ export default function BlueprintPage() {
         variant: store.variant,
       });
       if (result.success && result.wrappedBlueprint) {
-        store.setBlueprint(result.wrappedBlueprint, result.elements);
+        store.setBlueprint(result.wrappedBlueprint, result.commands);
         store.addVersion(result.wrappedBlueprint, store.variant);
       } else {
         store.setError(result.error || "Generation failed");
@@ -259,7 +257,7 @@ export default function BlueprintPage() {
         variant: v,
       });
       if (result.success && result.wrappedBlueprint) {
-        store.setBlueprint(result.wrappedBlueprint, result.elements);
+        store.setBlueprint(result.wrappedBlueprint, result.commands);
         store.addVersion(result.wrappedBlueprint, v);
       } else {
         store.setError(result.error || "Variant generation failed");
@@ -314,55 +312,53 @@ export default function BlueprintPage() {
     <div className="fixed inset-0 w-screen h-screen overflow-visible bg-[#f8f9fa]">
       {/* ═══ FULL-SCREEN CANVAS ═══ */}
       <div className="absolute inset-0 z-0">
-        <AnimatePresence mode="wait">
-          {!store.isGenerating && !store.blueprint && !store.error && (
-            <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center space-y-4 max-w-md">
-                <div className="p-10 rounded-3xl bg-white/80 backdrop-blur border border-border/40 mx-auto w-fit shadow-lg">
-                  <Wand2 className="w-16 h-16 text-muted-foreground/20" />
-                </div>
-                <p className="text-2xl font-bold text-foreground/60">Blueprint Draft Room</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Configure specifications below and click Generate to create a floor plan.
-                </p>
-              </div>
-            </motion.div>
-          )}
+        {/* Canvas is ALWAYS mounted once blueprint exists — never unmount */}
+        {store.blueprint && (
+          <div className="absolute inset-0">
+            <BlueprintCanvas className="w-full h-full" />
+          </div>
+        )}
 
-          {store.isGenerating && (
-            <motion.div key="generating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 flex items-center justify-center z-10 bg-white/60 backdrop-blur-sm">
-              <div className="text-center space-y-4">
-                <div className="w-20 h-20 rounded-full border-4 border-primary/20 border-t-primary animate-spin mx-auto" />
-                <p className="text-xl font-bold text-foreground/80">Generating blueprint...</p>
-                <p className="text-sm text-muted-foreground">Running layout engine</p>
+        {/* Idle state — no blueprint yet */}
+        {!store.blueprint && !store.isGenerating && !store.error && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center space-y-4 max-w-md">
+              <div className="p-10 rounded-3xl bg-white/80 backdrop-blur border border-border/40 mx-auto w-fit shadow-lg">
+                <Wand2 className="w-16 h-16 text-muted-foreground/20" />
               </div>
-            </motion.div>
-          )}
+              <p className="text-2xl font-bold text-foreground/60">Blueprint Draft Room</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Configure specifications below and click Generate to create a floor plan.
+              </p>
+            </div>
+          </div>
+        )}
 
-          {store.error && !store.isGenerating && (
-            <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 flex items-center justify-center p-6 z-10">
-              <div className="text-center max-w-sm">
-                <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-                  <AlertCircle className="w-8 h-8 text-red-400" />
-                </div>
-                <p className="text-lg font-bold mb-2">Generation Failed</p>
-                <p className="text-sm text-red-500 font-mono bg-red-50 border border-red-200 rounded-xl p-3 break-all">
-                  {store.error}
-                </p>
+        {/* Generating overlay — sits ON TOP of canvas, canvas stays mounted */}
+        {store.isGenerating && (
+          <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/60 backdrop-blur-sm">
+            <div className="text-center space-y-4">
+              <div className="w-20 h-20 rounded-full border-4 border-primary/20 border-t-primary animate-spin mx-auto" />
+              <p className="text-xl font-bold text-foreground/80">Generating blueprint...</p>
+              <p className="text-sm text-muted-foreground">Running layout engine</p>
+            </div>
+          </div>
+        )}
+
+        {/* Error state */}
+        {store.error && !store.isGenerating && (
+          <div className="absolute inset-0 flex items-center justify-center p-6 z-10">
+            <div className="text-center max-w-sm">
+              <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8 text-red-400" />
               </div>
-            </motion.div>
-          )}
-
-          {store.blueprint && !store.isGenerating && (
-            <motion.div key="canvas" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0">
-              <BlueprintCanvas className="w-full h-full" />
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <p className="text-lg font-bold mb-2">Generation Failed</p>
+              <p className="text-sm text-red-500 font-mono bg-red-50 border border-red-200 rounded-xl p-3 break-all">
+                {store.error}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 w-[calc(100vw-100px)] max-w-[1100px]">
@@ -619,8 +615,8 @@ export default function BlueprintPage() {
                                       doors: bp.doors.map((d: any) => ({ id: d.id, x: d.x, y: d.y, width: d.width })),
                                       windows: bp.windows.map((w: any) => ({ id: w.id, x: w.x, y: w.y, width: w.width })),
                                     });
-                                    const { elements } = renderCommandsToCanvas(cmds);
-                                    store.setBlueprint(v.blueprint, elements);
+                                    const { commands: renderedCommands } = renderCommandsToCanvas(cmds);
+                                    store.setBlueprint(v.blueprint, renderedCommands);
                                   }
                                 }}
                                 className={cn(

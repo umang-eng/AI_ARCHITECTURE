@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "backend:start": "cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
     "dev:full": "concurrently \"npm run dev\" \"npm run backend:start\"",
     "build": "next build",
@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.1",
+    "@opengeometry/openplans": "^0.1.5",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-slot": "^1.2.4",
     "@types/node": "^25.9.1",
@@ -32,6 +33,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.184.1",
     "autoprefixer": "^10.5.0",
+    "camera-controls": "^3.1.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.40.0",

@@ -33,7 +33,7 @@ export interface PipelineResult {
   success: boolean;
   blueprint: Blueprint | null;
   wrappedBlueprint: any | null;
-  elements: any[];
+  commands: any[];
   source: "ai" | "procedural";
   error?: string;
 }
@@ -112,7 +112,7 @@ async function runAIPipeline(input: PipelineInput): Promise<PipelineResult> {
     }, endTimer());
   } catch (err: any) {
     pipelineLogger.error("ai", "AI inference failed", err?.message, endTimer());
-    return { success: false, blueprint: null, wrappedBlueprint: null, elements: [], source: "ai", error: err?.message };
+    return { success: false, blueprint: null, wrappedBlueprint: null, commands: [], source: "ai", error: err?.message };
   }
 
   let parsed: unknown;
@@ -122,14 +122,14 @@ async function runAIPipeline(input: PipelineInput): Promise<PipelineResult> {
     pipelineLogger.warn("ai", "JSON parse failed, attempting repair");
     parsed = attemptJSONRepair(rawOutput);
     if (!parsed) {
-      return { success: false, blueprint: null, wrappedBlueprint: null, elements: [], source: "ai", error: "Invalid JSON from model" };
+      return { success: false, blueprint: null, wrappedBlueprint: null, commands: [], source: "ai", error: "Invalid JSON from model" };
     }
   }
 
   const { data, result } = validateAndClean(parsed);
   if (!data) {
     pipelineLogger.error("validator", "Validation failed", result.errors);
-    return { success: false, blueprint: null, wrappedBlueprint: null, elements: [], source: "ai", error: result.errors.join("; ") };
+    return { success: false, blueprint: null, wrappedBlueprint: null, commands: [], source: "ai", error: result.errors.join("; ") };
   }
 
   const blueprint = parseAIOutputToBlueprint(data);
@@ -176,14 +176,14 @@ async function runAIPipeline(input: PipelineInput): Promise<PipelineResult> {
   });
 
   const commands = generateCommandsFromBlueprint(blueprint);
-  const { elements } = renderCommandsToCanvas(commands);
+  const { commands: renderedCommands } = renderCommandsToCanvas(commands);
   const wrappedBlueprint = wrapForStore(blueprint, input.variant || "A", report);
 
   return {
     success: true,
     blueprint,
     wrappedBlueprint,
-    elements,
+    commands: renderedCommands,
     source: "ai",
   };
 }
@@ -238,14 +238,14 @@ function runProceduralPipeline(input: PipelineInput): PipelineResult {
   });
 
   const commands = generateCommandsFromBlueprint(blueprint);
-  const { elements } = renderCommandsToCanvas(commands);
+  const { commands: renderedCommands } = renderCommandsToCanvas(commands);
   const wrappedBlueprint = wrapForStore(blueprint, input.variant || "A", report);
 
   return {
     success: true,
     blueprint,
     wrappedBlueprint,
-    elements,
+    commands: renderedCommands,
     source: "procedural",
   };
 }

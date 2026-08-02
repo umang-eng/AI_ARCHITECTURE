@@ -168,10 +168,11 @@ class ModelLoader:
             self._loaded = True
 
     def _load_base(self, model_name: str, load_in_4bit: bool) -> None:
-        logger.info("loading_base_model", extra={"model": model_name, "4bit": load_in_4bit})
+        has_cuda = torch.cuda.is_available()
+        logger.info("loading_base_model", extra={"model": model_name, "cuda": has_cuda})
 
         bnb_config = None
-        if load_in_4bit:
+        if load_in_4bit and has_cuda:
             bnb_config = BitsAndBytesConfig(
                 load_in_4bit=True,
                 bnb_4bit_quant_type="nf4",
@@ -185,15 +186,17 @@ class ModelLoader:
         if self._tokenizer.pad_token is None:
             self._tokenizer.pad_token = self._tokenizer.eos_token
 
-        model_kwargs: Dict[str, Any] = {}
+        model_kwargs: Dict[str, Any] = {"trust_remote_code": True}
         if bnb_config:
             model_kwargs["quantization_config"] = bnb_config
+            model_kwargs["device_map"] = "auto"
+        else:
+            model_kwargs["device_map"] = "cpu"
+            model_kwargs["torch_dtype"] = torch.float32
 
         self._base_model = AutoModelForCausalLM.from_pretrained(
             model_name,
-            quantization_config=bnb_config,
-            device_map="auto",
-            trust_remote_code=True,
+            **model_kwargs,
         )
 
         logger.info("base_model_loaded", extra={"model": model_name})

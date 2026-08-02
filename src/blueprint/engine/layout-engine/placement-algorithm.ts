@@ -58,7 +58,7 @@ export function placeRooms(
       const height = Math.round(baseHeight * sizeVariation);
 
       // Use RNG to slightly offset the margin
-      const dynamicMargin = 3 + Math.floor(rng() * 5);
+      const dynamicMargin = 0;
 
       const result = findPlacement(
         width,
