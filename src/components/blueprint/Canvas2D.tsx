@@ -7,8 +7,8 @@ import { CommandType } from "@/blueprint/commands/command-types";
 
 const FT = 0.3048;
 const PX_PER_FT = 8;
-const MIN_ZOOM = 0.15;
-const MAX_ZOOM = 6;
+const MIN_ZOOM = 0.2;
+const MAX_ZOOM = 5;
 
 function ft(v: number): number {
   return v * FT;
@@ -25,13 +25,15 @@ function clampPan(
 ): { x: number; y: number } {
   const scaledW = plotW * FT * PX_PER_FT * zoom;
   const scaledH = plotH * FT * PX_PER_FT * zoom;
-  const padX = viewW * 0.1;
-  const padY = viewH * 0.1;
-  const maxX = (scaledW / 2) + padX;
-  const maxY = (scaledH / 2) + padY;
+
+  // How far the center of the plot can move from the center of the viewport
+  // while keeping at least 25% of the plot visible on each side
+  const maxOffsetX = Math.max(0, (viewW / 2) - (scaledW * 0.25));
+  const maxOffsetY = Math.max(0, (viewH / 2) - (scaledH * 0.25));
+
   return {
-    x: Math.max(-maxX, Math.min(maxX, px)),
-    y: Math.max(-maxY, Math.min(maxY, py)),
+    x: Math.max(-maxOffsetX, Math.min(maxOffsetX, px)),
+    y: Math.max(-maxOffsetY, Math.min(maxOffsetY, py)),
   };
 }
 
@@ -115,13 +117,17 @@ export default function Canvas2D() {
     const factor = e.deltaY > 0 ? 0.92 : 1.08;
     const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomRef.current * factor));
     zoomRef.current = newZoom;
+
     const canvas = canvasRef.current;
     if (canvas) {
       const dpr = window.devicePixelRatio || 1;
       const viewW = canvas.width / dpr;
       const viewH = canvas.height / dpr;
-      const clamped = clampPan(panRef.current.x, panRef.current.y, plotSizeRef.current.w, plotSizeRef.current.h, newZoom, viewW, viewH);
-      panRef.current = clamped;
+      panRef.current = clampPan(
+        panRef.current.x, panRef.current.y,
+        plotSizeRef.current.w, plotSizeRef.current.h,
+        newZoom, viewW, viewH,
+      );
     }
     draw();
   }, [draw]);
@@ -172,9 +178,9 @@ export default function Canvas2D() {
     const neededPx = totalFt * PX_PER_FT;
     const availW = parent.clientWidth;
     const availH = parent.clientHeight;
-    const newZoom = Math.min(availW / neededPx, availH / neededPx) * 0.85;
+    const newZoom = Math.min(availW / neededPx, availH / neededPx) * 0.9;
     zoomRef.current = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
-    panRef.current = { x: 0, y: 0 };
+    panRef.current = clampPan(0, 0, plotW, plotH, zoomRef.current, availW, availH);
     draw();
   }, [commands, draw]);
 
