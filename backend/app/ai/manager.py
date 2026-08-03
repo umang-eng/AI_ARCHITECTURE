@@ -6,7 +6,7 @@ between multiple underlying AI providers (DeepSeek, OpenAI, Claude, Gemini, Loca
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, cast
 
 from app.ai.agents.architect_agent import ArchitectAgent
 from app.ai.providers.base_provider import BaseAIProvider
@@ -29,9 +29,9 @@ class AIManager:
 
     def __init__(self, default_provider_name: Optional[str] = None):
         self._providers: Dict[str, BaseAIProvider] = {}
-        self._default_provider_name: str = (
-            default_provider_name 
-            or getattr(settings, "DEFAULT_AI_PROVIDER", "deepseek")
+        # Ensure default provider name is always a concrete string
+        self._default_provider_name: str = cast(
+            str, default_provider_name if default_provider_name is not None else getattr(settings, "DEFAULT_AI_PROVIDER", "deepseek")
         )
         self._initialize_providers()
 
@@ -135,7 +135,7 @@ class AIManager:
         If the target provider is not configured, it issues a warning and resolves
         gracefully to deepseek fallback.
         """
-        target_name = name or self._default_provider_name
+        target_name = name if name is not None else self._default_provider_name
         provider_key = target_name.lower()
 
         if provider_key in self._providers:

@@ -11,10 +11,10 @@ class StubProvider(BaseAIProvider):
     def __init__(self, name: str = "stub-model"):
         self.name = name
 
-    async def generate_text(self, prompt: str, **kwargs: Any) -> str:
+    async def generate_text(self, prompt: str, system_prompt: Optional[str] = None, model: Optional[str] = None, temperature: float = 0.0, max_tokens: int = 256, **kwargs: Any) -> str:
         return f"stub response for {prompt}"
 
-    async def generate_json(self, prompt: str, **kwargs: Any) -> Dict[str, Any]:
+    async def generate_json(self, prompt: str, system_prompt: Optional[str] = None, model: Optional[str] = None, schema: Optional[Dict[str, Any]] = None, **kwargs: Any) -> Dict[str, Any]:
         return {"stub": "data"}
 
     async def get_model_info(self) -> Dict[str, Any]:

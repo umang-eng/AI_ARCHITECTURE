@@ -9,7 +9,12 @@ import os
 import tempfile
 from typing import Any, Dict, List, Optional
 
-import cv2
+try:
+    import cv2  # type: ignore
+    CV2_AVAILABLE = True
+except Exception:
+    cv2: Any = None
+    CV2_AVAILABLE = False
 import PIL.Image
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException
 from google import genai
@@ -77,6 +82,9 @@ class VisionAnalysisResponse(BaseModel):
 def extract_video_frames(video_path: str, max_frames: int = 10) -> List[PIL.Image.Image]:
     """Sample frames from a video walkthrough at 1 frame per second."""
     logger.info(f"Extracting frames from video: {video_path}")
+    if not CV2_AVAILABLE:
+        raise RuntimeError("OpenCV (cv2) is not available in this environment; cannot extract video frames.")
+
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         raise RuntimeError("Failed to open video file")
@@ -88,7 +96,7 @@ def extract_video_frames(video_path: str, max_frames: int = 10) -> List[PIL.Imag
 
     # Sample 1 frame per second
     interval = max(1, int(fps))
-    frames = []
+    frames: List[PIL.Image.Image] = []
 
     count = 0
     while len(frames) < max_frames:
@@ -317,7 +325,7 @@ async def analyze_room_media(
     file_bytes = await file.read()
     filename = file.filename or "upload"
     ext = os.path.splitext(filename.lower())[1]
-    is_video = file.content_type.startswith("video/") or ext in (".mp4", ".mov", ".avi", ".webm", ".mkv")
+    is_video = (file.content_type or "").startswith("video/") or ext in (".mp4", ".mov", ".avi", ".webm", ".mkv")
 
     # Sample images list
     images: List[PIL.Image.Image] = []

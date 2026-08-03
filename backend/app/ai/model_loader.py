@@ -18,11 +18,15 @@ import logging
 import os
 import threading
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-from peft import PeftModel
+
+if TYPE_CHECKING:
+    from peft import PeftModel  # type: ignore
+else:
+    PeftModel: Any = None
 
 logger = logging.getLogger(__name__)
 
@@ -118,9 +122,10 @@ class ModelLoader:
         self._initialized = True
 
         self.registry = ModelRegistry()
-        self._tokenizer: Optional[AutoTokenizer] = None
-        self._base_model: Optional[AutoModelForCausalLM] = None
-        self._active_model: Optional[PeftModel] = None
+        # Use Any for tokenizer and models to avoid fragile third-party typing issues
+        self._tokenizer: Any = None
+        self._base_model: Any = None
+        self._active_model: Any = None
         self._active_adapter: Optional[str] = None
         self._model_lock = threading.Lock()
         self._loaded = False
@@ -204,6 +209,9 @@ class ModelLoader:
     def _load_adapter(self, adapter_name: str) -> None:
         adapter_path = self.registry.resolve_adapter_path(adapter_name)
         logger.info("loading_adapter", extra={"adapter": adapter_name, "path": str(adapter_path)})
+
+        if PeftModel is None:
+            raise RuntimeError("peft is not installed; cannot load the local adapter")
 
         self._active_model = PeftModel.from_pretrained(
             self._base_model, str(adapter_path)
