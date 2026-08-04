@@ -2,13 +2,19 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from typing import Any, cast
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from datetime import datetime, timezone
+
+try:
+    from slowapi.extension import _rate_limit_exceeded_handler
+except ImportError:  # pragma: no cover - compatibility fallback
+    from slowapi import _rate_limit_exceeded_handler
 
 from .core.config import settings
 from .middleware.common import ErrorHandlingMiddleware, LoggingMiddleware
@@ -46,7 +52,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(
+    RateLimitExceeded,
+    cast(Any, _rate_limit_exceeded_handler),
+)
 
 # Set all CORS enabled origins
 app.add_middleware(

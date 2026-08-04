@@ -20,6 +20,7 @@ from typing import Any, Dict, Optional
 from pydantic import ValidationError
 
 from app.ai.agents.architect_agent import ArchitectAgent
+from app.ai.monitoring import calculate_cost
 from app.ai.schemas.building_schema import (
     AIResponseEnvelope,
     BuildingRequirements,
@@ -172,7 +173,11 @@ class ArchitectService:
     ) -> Dict[str, Any]:
         """Produce a cost estimation report from cached requirements.
 
-        .. note:: Not yet implemented — raises ``NotImplementedError``.
+        The method uses the cached requirements as the source of truth for the
+        building scope and then asks the configured provider for a structured
+        estimate. When the provider returns usage metadata, that is used to
+        calculate the billed token cost; otherwise the service falls back to a
+        heuristic based on the request size.
         """
         requirements = self._results_cache.get(session_id)
         if requirements is None:
@@ -180,9 +185,77 @@ class ArchitectService:
                 f"No cached requirements for session_id={session_id!r}. "
                 "Call analyze_requirements first."
             )
-        raise NotImplementedError(
-            "generate_cost_estimation is planned for a future release"
+
+        prompt = (
+            f"Estimate the construction cost for a {requirements.building_type} "
+            f"{requirements.style} project with {requirements.bedrooms} bedrooms, "
+            f"{requirements.bathrooms} bathrooms, {requirements.floors} floors, "
+            f"plot {requirements.plot.width}x{requirements.plot.length} {requirements.plot.unit}, "
+            f"budget {requirements.budget or 'unknown'} and features {', '.join(requirements.features) or 'none'}."
         )
+
+        response = await self._agent.provider.generate_json(
+            prompt=prompt,
+            system_prompt=(
+                "You are a construction-cost estimation assistant. Return strict JSON with "
+                "estimated_total_cost_usd, currency, and cost_breakdown fields."
+            ),
+            temperature=0,
+        )
+
+        report: Dict[str, Any] = {
+            "success": False,
+            "requirements": requirements.model_dump(mode="json"),
+            "report": {},
+            "cost": {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "provider_cost_usd": 0.0,
+                "estimated_cost_usd": None,
+            },
+        }
+
+        usage: Dict[str, Any] = {}
+        if isinstance(response, dict):
+            usage = response.get("usage") or {}
+            report["report"] = response.get("json") or response.get("result") or response.get("data") or {}
+            if isinstance(report["report"], str):
+                report["report"] = {"raw": report["report"]}
+
+        prompt_tokens = int(usage.get("prompt_tokens", 0) or 0)
+        completion_tokens = int(usage.get("completion_tokens", 0) or 0)
+        total_tokens = int(usage.get("total_tokens", prompt_tokens + completion_tokens) or 0)
+
+        if total_tokens == 0 and prompt_tokens == 0 and completion_tokens == 0:
+            prompt_tokens = len(prompt.split()) * 4
+            completion_tokens = 64
+            total_tokens = prompt_tokens + completion_tokens
+
+        provider_model = None
+        if isinstance(response, dict):
+            provider_model = response.get("model") or getattr(self._agent.provider, "default_model_name", None)
+
+        provider_cost_usd = calculate_cost(
+            provider_model or "gemini-2.5-flash",
+            prompt_tokens,
+            completion_tokens,
+        )
+
+        report["cost"] = {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+            "provider_cost_usd": round(provider_cost_usd, 6),
+            "estimated_cost_usd": None,
+        }
+
+        if isinstance(report["report"], dict):
+            if "estimated_total_cost_usd" in report["report"]:
+                report["cost"]["estimated_cost_usd"] = float(report["report"]["estimated_total_cost_usd"])
+            report["success"] = True
+
+        return report
 
     async def generate_design_options(
         self,

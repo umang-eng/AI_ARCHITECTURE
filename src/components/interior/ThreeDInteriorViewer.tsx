@@ -97,7 +97,7 @@ export default function ThreeDInteriorViewer({ design, width, height, furniture 
     measurementGroupRef.current = measurementGroup;
 
     // 5. Materials specifications mapping
-    const matMap: Record<string, THREE.MeshStandardMaterial> = {};
+    const matMap: Record<string, THREE.Material> = {};
     design.materialJson.forEach(spec => {
       matMap[spec.element] = new THREE.MeshStandardMaterial({
         color: new THREE.Color(spec.colorHex),
@@ -106,136 +106,181 @@ export default function ThreeDInteriorViewer({ design, width, height, furniture 
       });
     });
 
-    const floorMat = matMap["floor"] || new THREE.MeshStandardMaterial({ color: "#cbd5e1", roughness: 0.5 });
-    const wallMat = matMap["walls"] || new THREE.MeshStandardMaterial({ color: "#f8fafc", roughness: 0.9 });
-    const ceilingMat = matMap["ceiling"] || new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.95 });
+    const floorMat = matMap["floor"] || new THREE.MeshStandardMaterial({ color: "#e6e8eb", roughness: 0.5 });
+    const wallMat = matMap["walls"] || new THREE.MeshStandardMaterial({ color: "#f7f9fb", roughness: 0.92 });
+    const ceilingMat = matMap["ceiling"] || new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.96 });
+
+    // Add default scene lighting so the room is vibrant even with no design lights
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x888899, 0.75);
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight.position.set(width * 1.5, ch * 2.5, height * 1.5);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 0.1;
+    dirLight.shadow.camera.far = 200;
+    scene.add(dirLight);
 
     // 6. Draw Enclosure
-    // Floor
     const floorMesh = new THREE.Mesh(new THREE.BoxGeometry(width, 0.2, height), floorMat);
     floorMesh.position.set(width / 2, -0.1, height / 2);
     floorMesh.receiveShadow = true;
     wallGroup.add(floorMesh);
 
-    // Ceiling
     const ceilingMesh = new THREE.Mesh(new THREE.BoxGeometry(width, 0.2, height), ceilingMat);
     ceilingMesh.position.set(width / 2, ch + 0.1, height / 2);
     wallGroup.add(ceilingMesh);
 
-    // Walls
-    const tw = 0.4;
-    // Left
-    const wl = new THREE.Mesh(new THREE.BoxGeometry(tw, ch, height), wallMat);
-    wl.position.set(0, ch / 2, height / 2);
-    wl.receiveShadow = true;
-    wl.castShadow = true;
-    wallGroup.add(wl);
+    const tw = 0.35;
+    const wallOptions = [
+      { geom: new THREE.BoxGeometry(tw, ch, height), pos: [0, ch / 2, height / 2] },
+      { geom: new THREE.BoxGeometry(tw, ch, height), pos: [width, ch / 2, height / 2] },
+      { geom: new THREE.BoxGeometry(width, ch, tw), pos: [width / 2, ch / 2, 0] },
+      { geom: new THREE.BoxGeometry(width, ch, tw), pos: [width / 2, ch / 2, height] },
+    ];
 
-    // Right
-    const wr = new THREE.Mesh(new THREE.BoxGeometry(tw, ch, height), wallMat);
-    wr.position.set(width, ch / 2, height / 2);
-    wr.receiveShadow = true;
-    wr.castShadow = true;
-    wallGroup.add(wr);
+    wallOptions.forEach(opts => {
+      const wall = new THREE.Mesh(opts.geom, wallMat);
+      wall.position.set(...opts.pos);
+      wall.receiveShadow = true;
+      wall.castShadow = true;
+      wallGroup.add(wall);
+    });
 
-    // Front
-    const wf = new THREE.Mesh(new THREE.BoxGeometry(width, ch, tw), wallMat);
-    wf.position.set(width / 2, ch / 2, 0);
-    wf.receiveShadow = true;
-    wf.castShadow = true;
-    wallGroup.add(wf);
-
-    // Back
-    const wb = new THREE.Mesh(new THREE.BoxGeometry(width, ch, tw), wallMat);
-    wb.position.set(width / 2, ch / 2, height);
-    wb.receiveShadow = true;
-    wb.castShadow = true;
-    wallGroup.add(wb);
-
-    // 7. Draw Furniture with styled colors
+    // 7. Draw Furniture with more natural forms
     furniture.forEach(f => {
-      const fMat = matMap[f.id] || new THREE.MeshStandardMaterial({ color: "#3b82f6", roughness: 0.6 });
-      const fMesh = new THREE.Mesh(new THREE.BoxGeometry(f.width, 2.5, f.height), fMat);
-      fMesh.position.set(f.x, 1.25, f.y);
-      fMesh.castShadow = true;
-      fMesh.receiveShadow = true;
-      furnitureGroup.add(fMesh);
+      const material = matMap[f.id] || new THREE.MeshStandardMaterial({ color: "#4f46e5", roughness: 0.55, metalness: 0.1 });
+      let mesh: THREE.Mesh;
 
-      // Frame outline
-      const edge = new THREE.EdgesGeometry(fMesh.geometry);
-      const wire = new THREE.LineSegments(edge, new THREE.LineBasicMaterial({ color: "#ffffff", opacity: 0.2, transparent: true }));
-      fMesh.add(wire);
+      if (f.type === "bed") {
+        const base = new THREE.Mesh(new THREE.BoxGeometry(f.width, 0.8, f.height), material);
+        const mattress = new THREE.Mesh(new THREE.BoxGeometry(f.width - 0.2, 0.4, f.height - 0.2), new THREE.MeshStandardMaterial({ color: "#f8fafc", roughness: 0.7 }));
+        const headboard = new THREE.Mesh(new THREE.BoxGeometry(f.width, 1.2, 0.2), new THREE.MeshStandardMaterial({ color: "#334155", roughness: 0.6 }));
+        base.add(mattress);
+        base.add(headboard);
+        mattress.position.set(0, 0.6, 0);
+        headboard.position.set(0, 0.3, -(f.height / 2) + 0.1);
+        mesh = base;
+      } else if (f.type === "sofa") {
+        const sofaGroup = new THREE.Group();
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(f.width, 1.2, f.height / 2), material);
+        const back = new THREE.Mesh(new THREE.BoxGeometry(f.width, 1.0, 0.3), new THREE.MeshStandardMaterial({ color: "#0f172a", roughness: 0.65 }));
+        const armLeft = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.0, f.height / 2), new THREE.MeshStandardMaterial({ color: "#334155", roughness: 0.65 }));
+        const armRight = armLeft.clone();
+        sofaGroup.add(seat, back, armLeft, armRight);
+        seat.position.set(0, 0.6, 0);
+        back.position.set(0, 0.95, -(f.height / 4) + 0.05);
+        armLeft.position.set(-(f.width / 2) + 0.3, 0.55, 0);
+        armRight.position.set((f.width / 2) - 0.3, 0.55, 0);
+        mesh = sofaGroup as unknown as THREE.Mesh;
+      } else if (f.type === "dining_table" || f.type === "table" || f.type === "desk") {
+        const tableTop = new THREE.Mesh(new THREE.BoxGeometry(f.width, 0.2, f.height), material);
+        const legMat = new THREE.MeshStandardMaterial({ color: "#334155", roughness: 0.6 });
+        const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), legMat);
+        const leg2 = leg1.clone();
+        const leg3 = leg1.clone();
+        const leg4 = leg1.clone();
+        const table = new THREE.Group();
+        table.add(tableTop, leg1, leg2, leg3, leg4);
+        tableTop.position.set(0, 0.9, 0);
+        leg1.position.set(-(f.width / 2) + 0.3, 0.45, -(f.height / 2) + 0.3);
+        leg2.position.set((f.width / 2) - 0.3, 0.45, -(f.height / 2) + 0.3);
+        leg3.position.set(-(f.width / 2) + 0.3, 0.45, (f.height / 2) - 0.3);
+        leg4.position.set((f.width / 2) - 0.3, 0.45, (f.height / 2) - 0.3);
+        mesh = table as unknown as THREE.Mesh;
+      } else if (f.type === "bathtub") {
+        const tub = new THREE.Mesh(new THREE.BoxGeometry(f.width, 0.9, f.height), new THREE.MeshStandardMaterial({ color: "#f8fafc", roughness: 0.35, metalness: 0.05 }));
+        mesh = tub;
+      } else if (f.type === "wardrobe" || f.type === "bookshelf" || f.type === "cabinet") {
+        const cabinet = new THREE.Mesh(new THREE.BoxGeometry(f.width, 2.2, f.height), new THREE.MeshStandardMaterial({ color: "#7c3aed", roughness: 0.7, metalness: 0.05 }));
+        mesh = cabinet;
+      } else if (f.type === "chair") {
+        const chair = new THREE.Group();
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.3, 1.6), material);
+        const back = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.2, 0.2), new THREE.MeshStandardMaterial({ color: "#334155", roughness: 0.72 }));
+        const legGeo = new THREE.BoxGeometry(0.15, 1.0, 0.15);
+        const legMat = new THREE.MeshStandardMaterial({ color: "#1e293b", roughness: 0.8 });
+        const legs = [new THREE.Mesh(legGeo, legMat), new THREE.Mesh(legGeo, legMat), new THREE.Mesh(legGeo, legMat), new THREE.Mesh(legGeo, legMat)];
+        legs.forEach((leg, idx) => {
+          leg.position.set((idx < 2 ? -0.7 : 0.7), 0.45, (idx % 2 === 0 ? -0.7 : 0.7));
+          chair.add(leg);
+        });
+        chair.add(seat, back);
+        seat.position.set(0, 0.55, 0);
+        back.position.set(0, 1.05, -0.7);
+        mesh = chair as unknown as THREE.Mesh;
+      } else {
+        mesh = new THREE.Mesh(new THREE.BoxGeometry(f.width, 1.6, f.height), material);
+      }
+
+      mesh.position.set(f.x, 0, f.y);
+      if (typeof f.rotation === "number" && mesh.rotation) {
+        mesh.rotation.y = THREE.MathUtils.degToRad(f.rotation);
+      }
+
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      furnitureGroup.add(mesh);
     });
 
     // 8. Place Lighting Nodes
     design.lightingJson.forEach(l => {
       const lightColor = new THREE.Color(l.colorHex);
-      
-      // Ambient scene lighting
       if (l.type === "ambient") {
-        const amb = new THREE.AmbientLight(lightColor, 0.4);
+        const amb = new THREE.AmbientLight(lightColor, 0.35);
         lightGroup.add(amb);
-
-        // Ceiling chandelier node
-        const pLight = new THREE.PointLight(lightColor, l.intensity * 1.5, 40);
-        pLight.position.set(l.x, l.z, l.y);
-        pLight.castShadow = true;
-        pLight.shadow.bias = -0.001;
-        pLight.shadow.mapSize.width = 1024;
-        pLight.shadow.mapSize.height = 1024;
-        lightGroup.add(pLight);
-
-        // Visual bulb bulb
-        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshBasicMaterial({ color: l.colorHex }));
-        bulb.position.set(l.x, l.z, l.y);
-        lightGroup.add(bulb);
-      } else {
-        // Spotlight or bedside point lights
-        const spot = new THREE.PointLight(lightColor, l.intensity * 1.2, 20);
-        spot.position.set(l.x, l.z, l.y);
-        spot.castShadow = true;
-        lightGroup.add(spot);
-
-        // Visual lamp
-        const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.4, 0.8), new THREE.MeshBasicMaterial({ color: l.colorHex }));
-        lamp.position.set(l.x, l.z, l.y);
-        lightGroup.add(lamp);
       }
+
+      const pLight = new THREE.PointLight(lightColor, l.intensity * 1.2, 40, 2);
+      pLight.position.set(l.x, l.z, l.y);
+      pLight.castShadow = true;
+      pLight.shadow.bias = -0.001;
+      pLight.shadow.mapSize.width = 1024;
+      pLight.shadow.mapSize.height = 1024;
+      lightGroup.add(pLight);
+
+      const bulb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.22, 12, 12),
+        new THREE.MeshBasicMaterial({ color: l.colorHex })
+      );
+      bulb.position.set(l.x, l.z, l.y);
+      lightGroup.add(bulb);
     });
 
     // 9. Place Decorations
     design.interiorJson.forEach(dec => {
       if (dec.type === "rug") {
-        // Flat thin floor mesh
         const rugGeo = new THREE.BoxGeometry(dec.width, 0.02, dec.height);
-        const rugMat = new THREE.MeshStandardMaterial({ color: dec.colorHex, roughness: 0.95 });
+        const rugMat = new THREE.MeshStandardMaterial({ color: dec.colorHex, roughness: 0.91 });
         const rug = new THREE.Mesh(rugGeo, rugMat);
         rug.position.set(dec.x, 0.01, dec.y);
         rug.receiveShadow = true;
         decorGroup.add(rug);
       } else if (dec.type === "painting") {
-        // Frame on wall plane
-        const artGeo = new THREE.BoxGeometry(0.1, dec.height, dec.width);
-        const artMat = new THREE.MeshStandardMaterial({ color: dec.colorHex, roughness: 0.8 });
+        const artGeo = new THREE.PlaneGeometry(dec.width, dec.height);
+        const artMat = new THREE.MeshStandardMaterial({ color: dec.colorHex, roughness: 0.8, side: THREE.DoubleSide });
         const art = new THREE.Mesh(artGeo, artMat);
-        art.position.set(dec.x + 0.05, 4.5, dec.y); // hung at 4.5ft height
+        art.position.set(dec.x + 0.05, 4.5, dec.y);
+        art.rotation.y = Math.PI / 2;
         art.castShadow = true;
         decorGroup.add(art);
       } else if (dec.type === "plant") {
-        // Simple pot and plant cylinder representation
-        const potGeo = new THREE.CylinderGeometry(0.5, 0.3, 1.0);
-        const potMat = new THREE.MeshStandardMaterial({ color: "#7c2d12", roughness: 0.7 });
+        const potGeo = new THREE.CylinderGeometry(0.4, 0.55, 0.9, 12);
+        const potMat = new THREE.MeshStandardMaterial({ color: "#92400e", roughness: 0.72 });
         const pot = new THREE.Mesh(potGeo, potMat);
-        pot.position.set(dec.x, 0.5, dec.y);
+        pot.position.set(dec.x, 0.45, dec.y);
         pot.castShadow = true;
         decorGroup.add(pot);
 
-        const leafGeo = new THREE.SphereGeometry(0.8, 8, 8);
-        const leafMat = new THREE.MeshStandardMaterial({ color: dec.colorHex, roughness: 0.9 });
-        const leaf = new THREE.Mesh(leafGeo, leafMat);
-        leaf.position.set(dec.x, 1.3, dec.y);
-        leaf.castShadow = true;
-        decorGroup.add(leaf);
+        const leaves = new THREE.Mesh(
+          new THREE.SphereGeometry(0.75, 10, 10),
+          new THREE.MeshStandardMaterial({ color: dec.colorHex, roughness: 0.85 })
+        );
+        leaves.position.set(dec.x, 1.4, dec.y);
+        leaves.castShadow = true;
+        decorGroup.add(leaves);
       }
     });
 

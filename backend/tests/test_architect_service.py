@@ -41,6 +41,28 @@ class FakeProvider:
         self.calls.append(kwargs)
         if self.error:
             raise self.error
+
+        prompt = kwargs.get("prompt", "")
+        if isinstance(prompt, str) and "Estimate the construction cost" in prompt:
+            return {
+                "success": True,
+                "json": {
+                    "estimated_total_cost_usd": 235000.0,
+                    "currency": "USD",
+                    "cost_breakdown": {
+                        "construction": 195000.0,
+                        "soft_costs": 40000.0,
+                    },
+                },
+                "usage": {
+                    "prompt_tokens": 110,
+                    "completion_tokens": 60,
+                    "total_tokens": 170,
+                },
+                "provider": "fake",
+                "model": "fake-model",
+            }
+
         return self.response
 
     async def get_model_info(self):
@@ -486,12 +508,19 @@ async def test_cost_estimation_requires_prior_analysis():
 
 
 @pytest.mark.asyncio
-async def test_cost_estimation_not_implemented():
+async def test_cost_estimation_uses_provider_usage_and_cached_requirements():
     service = _service(response=MODERN_VILLA)
     await service.analyze_requirements("stub", session_id="ce")
 
-    with pytest.raises(NotImplementedError, match="cost_estimation"):
-        await service.generate_cost_estimation("ce")
+    result = await service.generate_cost_estimation("ce")
+
+    assert result["success"] is True
+    assert result["report"]["estimated_total_cost_usd"] == 235000.0
+    assert result["report"]["currency"] == "USD"
+    assert result["cost"]["prompt_tokens"] == 110
+    assert result["cost"]["completion_tokens"] == 60
+    assert result["cost"]["total_tokens"] == 170
+    assert result["cost"]["provider_cost_usd"] > 0
 
 
 @pytest.mark.asyncio
